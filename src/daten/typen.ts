@@ -17,6 +17,8 @@ export interface Verein {
   farbePrimaer: string;
   farbeAkzent: string;
   logo?: string;
+  /** Fotos je Sportart (ersetzen die bewegte Szene, wenn eine Mannschaft kein eigenes Foto hat) */
+  sportBilder?: Record<string, string>;
   strasse: string; plz: string; ort: string;
   email: string; telefon: string;
   facebook?: string; instagram?: string; youtube?: string;

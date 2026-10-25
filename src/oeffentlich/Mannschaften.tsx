@@ -9,6 +9,7 @@ import { useSeite } from '../seo';
 import { Leer } from '../ui/bausteine';
 import { AusgangPunkt, Inhalt, SeitenKopf, SpielZeile, TabellenAnsicht, Trainingszeiten } from './Teile';
 import { NichtGefunden } from './Inhalte';
+import { FigurAvatar, MannschaftsBild, SportSzene, Teamfoto, altersgruppe, echtesFoto, fotoFuer } from './SportSzene';
 
 const BEREICHE: Kategorie[] = ['Herren', 'Frauen', 'Senioren', 'Jugend', 'Freizeit'];
 
@@ -43,7 +44,7 @@ function MannschaftKarte({ m, d }: { m: Mannschaft; d: Datenbestand }) {
   return (
     <Link to={`/mannschaften/${m.id}`} className="schweben group overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="relative aspect-[16/8] overflow-hidden">
-        <img src={m.bild} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+        <MannschaftsBild m={m} v={d.verein} className="h-full w-full transition duration-500 group-hover:scale-105" />
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-primaer">{m.sportart}</span>
       </div>
       <div className="p-5">
@@ -104,7 +105,7 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
 
   return (
     <>
-      <SeitenKopf titel={m.name} bild={m.bild} krumen={[{ text: 'Mannschaften', zu: '/mannschaften' }, { text: m.name }]}
+      <SeitenKopf titel={m.name} bild={fotoFuer(m, d.verein)} szene={fotoFuer(m, d.verein) ? undefined : <SportSzene m={m} primaer={d.verein.farbePrimaer} akzent={d.verein.farbeAkzent} className="h-full w-full" />} krumen={[{ text: 'Mannschaften', zu: '/mannschaften' }, { text: m.name }]}
         unter={<span className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/15 px-3 py-0.5 text-sm">{m.sportart}</span>{m.liga && <span className="rounded-full bg-akzent px-3 py-0.5 text-sm font-semibold text-white">{m.liga}</span>}<span className="text-sm">Saison {saison}</span></span>}>
         {b.spiele > 0 && (
           <div className="mt-6 flex flex-wrap gap-3">
@@ -146,6 +147,14 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
 
         {aktiv === 'team' && (
           <>
+            {(kader.length > 0 || echtesFoto(m)) && <figure className="mb-10 overflow-hidden rounded-3xl bg-slate-900 shadow-xl ring-1 ring-slate-200">
+              {echtesFoto(m) ? <img src={echtesFoto(m)} alt={`Mannschaftsfoto ${m.name}`} className="aspect-[16/9] w-full object-cover" />
+                : <Teamfoto m={m} spieler={kader} trainer={m.betreuer.map((b) => b.name)} v={d.verein} className="aspect-[16/10] w-full sm:aspect-[16/8]" />}
+              <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-white px-5 py-3 text-sm text-slate-600">
+                <span><b className="text-slate-900">{m.name}</b> · {kader.length} Spieler · Saison {saison}</span>
+                <span>Trainer: {m.betreuer.map((b) => b.name).join(', ') || '–'}</span>
+              </figcaption>
+            </figure>}
             {(['Tor', 'Abwehr', 'Mittelfeld', 'Sturm', 'Spieler'] as const).map((pos) => {
               const liste = kader.filter((p) => (p.position ?? 'Spieler') === pos).sort((a, b) => (a.nummer ?? 99) - (b.nummer ?? 99));
               if (!liste.length) return null;
@@ -154,10 +163,11 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
                   <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">{pos === 'Spieler' ? 'Spieler/innen' : pos}</h2>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                     {liste.map((p) => (
-                      <div key={p.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primaer to-primaer-dunkel p-4 text-white">
+                      <div key={p.id} className="schweben relative overflow-hidden rounded-2xl bg-gradient-to-br from-primaer to-primaer-dunkel p-4 text-white">
                         <span className="zahlen absolute -right-1 -top-3 text-6xl font-black text-white/10">{p.nummer}</span>
-                        <span className="zahlen text-sm font-bold text-akzent">#{p.nummer ?? '–'}</span>
-                        <p className="mt-6 font-bold leading-tight">{spielerName(p, d.verein.namenKuerzen)}</p>
+                        <span className="zahlen text-sm font-bold text-white/80">#{p.nummer ?? '–'}</span>
+                        <FigurAvatar nummer={p.nummer} frau={m.kategorie === 'Frauen'} gruppe={altersgruppe(m)} v={d.verein} className="mx-auto mt-1 h-24 w-20" />
+                        <p className="mt-2 text-center font-bold leading-tight">{spielerName(p, d.verein.namenKuerzen)}</p>
                       </div>
                     ))}
                   </div>
@@ -165,7 +175,13 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
               );
             })}
             <h2 className="mb-3 mt-4 text-sm font-bold uppercase tracking-wider text-slate-500">Trainer & Betreuer</h2>
-            <div className="flex flex-wrap gap-3">{m.betreuer.map((p) => <span key={p.id} className="rounded-full bg-white px-4 py-2 text-sm ring-1 ring-slate-200"><b>{p.name}</b> · {p.amt}</span>)}</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{m.betreuer.map((p) => (
+              <div key={p.id} className="rounded-2xl bg-slate-800 p-4 text-center text-white">
+                <FigurAvatar trainer gruppe="erwachsene" v={d.verein} className="mx-auto h-24 w-20" />
+                <p className="mt-2 font-bold leading-tight">{p.name}</p>
+                <p className="text-xs text-white/60">{p.amt}</p>
+              </div>
+            ))}</div>
           </>
         )}
 

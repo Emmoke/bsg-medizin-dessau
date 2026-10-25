@@ -133,7 +133,6 @@ export function beispielDaten(): Datenbestand {
       betreuer: [person('Dr. Claudia Herz', 'Übungsleiterin (Reha)')], trainingszeiten: [tz('Montag', '10:00', '11:00', 'Turnhalle Nord'), tz('Mittwoch', '10:00', '11:00', 'Turnhalle Nord')], reihenfolge: 10,
       beschreibung: 'Ärztlich verordneter Rehasport und Präventionskurse – die BSG-Wurzeln in der Medizin.' },
   ];
-  for (const m of mannschaften) m.bild = platzhalter(m.sportart === 'Fußball' ? 'feld' : 'halle', BLAU, DUNKEL);
 
   // ---- Spieler ----
   const spieler: Spieler[] = [];

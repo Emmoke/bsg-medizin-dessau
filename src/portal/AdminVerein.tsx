@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Plus, Pencil, Trash2, Download, Upload, ArrowUp, ArrowDown, RefreshCw, Cake, Search } from 'lucide-react';
 import { aktualisieren, hinzufuegen, entfernen, neueId, speichereEintrag, vereinAendern } from '../daten/speicher';
 import { bilanz, datumKurz, geburtstage, sortiereTabelle, slug, alterAm } from '../daten/auswertung';
-import { platzhalter } from '../daten/bilder';
+import { MannschaftsBild, SportSzene } from '../oeffentlich/SportSzene';
 import type { Beitrag, Chronikeintrag, Kategorie, Kontaktperson, Mannschaft, Mitglied, Spiel, Sportstaette, Tabelle, Tabellenzeile, Trainingszeit, Verein } from '../daten/typen';
 import { Auswahl, BildWahl, Dialog, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import type { SeitenProps } from './Portal';
@@ -84,6 +84,26 @@ export function VereinVerwaltung({ d }: SeitenProps) {
               </div>
             </div>
           </Karte>
+          <Karte titel="Fotos je Sportart" className="lg:col-span-2">
+            <p className="mb-4 text-sm text-slate-500">Ohne Foto zeigt die Webseite eine bewegte Szene passend zu Sportart und Altersgruppe. Ein Foto hier ersetzt die Szene für alle Mannschaften dieser Sportart – ein eigenes Mannschaftsfoto (unter „Mannschaften“) hat immer Vorrang. Nur Fotos mit Einwilligung der Abgebildeten verwenden.</p>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[...new Set(d.mannschaften.map((m) => m.sportart))].map((sportart) => {
+                const beispiel = d.mannschaften.find((m) => m.sportart === sportart)!;
+                return (
+                  <div key={sportart} className="rounded-xl border border-slate-200 p-3">
+                    <div className="mb-3 overflow-hidden rounded-lg">
+                      {v.sportBilder?.[sportart] ? <img src={v.sportBilder[sportart]} alt="" className="aspect-video w-full object-cover" /> : <SportSzene m={beispiel} primaer={v.farbePrimaer} akzent={v.farbeAkzent} className="aspect-video w-full" />}
+                    </div>
+                    <BildWahl label={sportart} wert={v.sportBilder?.[sportart]} onChange={(src) => {
+                      const neu = { ...(v.sportBilder ?? {}) };
+                      if (src) neu[sportart] = src; else delete neu[sportart];
+                      setze('sportBilder', neu);
+                    }} />
+                  </div>
+                );
+              })}
+            </div>
+          </Karte>
         </div>
       )}
       {r === 'vorstand' && <Karte titel="Vorstand & Ansprechpartner"><ListenEditor<Kontaktperson> werte={v.vorstand} onChange={(w) => setze('vorstand', w)} neu={() => ({ id: neueId('v'), name: '', amt: '' })} felder={[{ k: 'amt', label: 'Amt' }, { k: 'name', label: 'Name' }, { k: 'email', label: 'E-Mail' }, { k: 'telefon', label: 'Telefon' }]} /></Karte>}
@@ -121,7 +141,7 @@ export function MannschaftenVerwaltung({ d }: SeitenProps) {
     if (!m.name.trim()) return hinweis('Name fehlt', 'fehler');
     const id = m.id || slug(m.name);
     if (!m.id && d.mannschaften.some((x) => x.id === id)) return hinweis('Eine Mannschaft mit diesem Namen gibt es schon', 'fehler');
-    const fertig = { ...m, id, bild: m.bild ?? platzhalter(m.sportart === 'Fußball' ? 'feld' : 'halle', d.verein.farbePrimaer, '#062b52') };
+    const fertig = { ...m, id };
     speichereEintrag('mannschaften', fertig, `Mannschaft gespeichert: ${m.name}`);
     // Trainerzuordnung auch am Benutzer pflegen, damit der Trainerbereich passt
     for (const t of trainer) {
@@ -138,7 +158,7 @@ export function MannschaftenVerwaltung({ d }: SeitenProps) {
       <Karte innen={false}>
         <ul className="divide-y divide-slate-100">{liste.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center gap-4 px-5 py-3">
-            <img src={m.bild} alt="" className="h-12 w-16 rounded-lg object-cover" />
+            <MannschaftsBild m={m} v={d.verein} className="h-12 w-16 overflow-hidden rounded-lg" />
             <div className="min-w-0 flex-1"><p className="font-semibold">{m.name} <span className="text-xs font-normal text-slate-400">/{m.id}</span></p><p className="text-xs text-slate-500">{m.sportart} · {m.kategorie}{m.liga ? ` · ${m.liga}` : ''}</p></div>
             <span className="text-sm text-slate-500">{d.spieler.filter((p) => p.mannschaftId === m.id && p.aktiv).length} Spieler</span>
             <span className="flex flex-wrap gap-1">{m.trainerIds.map((t) => { const x = d.benutzer.find((y) => y.id === t); return x ? <Marke key={t} ton="blau">{x.vorname} {x.nachname}</Marke> : null; })}{!m.trainerIds.length && <Marke ton="gelb">kein Trainerzugang</Marke>}</span>

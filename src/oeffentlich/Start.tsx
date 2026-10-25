@@ -4,7 +4,8 @@ import { Link } from '../router';
 import { useDaten } from '../daten/speicher';
 import { alsDatum, datumKurz, geburtstage, letzteSpiele, naechsteSpiele, paarung, uhrzeit, spielerName } from '../daten/auswertung';
 import { useSeite } from '../seo';
-import { Abschnitt, Countdown, GegnerMarke, NewsKarte, SpielZeile, TabellenAnsicht, Wappen } from './Teile';
+import { MannschaftsBild } from './SportSzene';
+import { Abschnitt,Countdown, GegnerMarke, NewsKarte, SpielZeile, TabellenAnsicht, Wappen } from './Teile';
 
 export function Start() {
   const d = useDaten();
@@ -106,7 +107,7 @@ export function Start() {
           <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-5">
             {[...d.mannschaften].sort((a, b) => a.reihenfolge - b.reihenfolge).slice(0, 10).map((m) => (
               <Link key={m.id} to={`/mannschaften/${m.id}`} className="schweben group relative w-56 shrink-0 snap-start overflow-hidden rounded-2xl sm:w-auto">
-                <img src={m.bild} alt="" className="aspect-[4/5] w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+                <MannschaftsBild m={m} v={v} className="aspect-[4/5] w-full transition duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-akzent">{m.sportart} · {m.kategorie}</span>

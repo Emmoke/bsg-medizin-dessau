@@ -48,3 +48,46 @@
 }
 .text-ausgleich { text-wrap: balance; }
 .zahlen { font-variant-numeric: tabular-nums; }
+
+/* Bewegte Sportszenen (SportSzene.tsx) – nur ohne "Bewegung reduzieren" */
+.sz-bein, .sz-arm, .sz-dehnen, .sz-zopf { transform-box: fill-box; transform-origin: top center; }
+.sz-drehen { transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .sz-bein { animation: sz-schwingen .44s ease-in-out infinite alternate; }
+  .sz-arm { animation: sz-schwingen .44s ease-in-out infinite alternate-reverse; }
+  .sz-gegen { animation-direction: alternate-reverse; }
+  .sz-arm.sz-gegen { animation-direction: alternate; }
+  .sz-hupf { animation: sz-hupf .44s ease-in-out infinite alternate; }
+  .sz-sprung { animation: sz-sprung 1.3s cubic-bezier(.3, .7, .4, 1) infinite; }
+  .sz-dehnen { animation: sz-dehnen 2.6s ease-in-out infinite; }
+  .sz-zopf { animation: sz-schwingen .44s ease-in-out infinite alternate; }
+  .sz-wandern { animation: sz-wandern 10s ease-in-out infinite alternate; }
+  .sz-rollen { animation: sz-rollen .9s ease-in-out infinite alternate; }
+  .sz-tippen { animation: sz-tippen .7s cubic-bezier(.5, 0, .5, 1) infinite alternate; }
+  .sz-drehen { animation: sz-drehen 1.2s linear infinite; }
+  .sz-bogen-x { animation: sz-bogen-x 2.6s ease-in-out infinite alternate; }
+  .sz-bogen-y { animation: sz-bogen-y 1.3s ease-in-out infinite alternate; }
+  .sz-puls { stroke-dasharray: 420; animation: sz-puls 2.4s linear infinite; }
+  .sz-herz { transform-box: fill-box; transform-origin: center; animation: sz-herz 1.2s ease-in-out infinite; }
+  .sz-wolke { animation: sz-wolke 30s linear infinite alternate; }
+}
+@keyframes sz-schwingen { from { transform: rotate(-28deg); } to { transform: rotate(28deg); } }
+@keyframes sz-hupf { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+@keyframes sz-sprung { 0%, 55%, 100% { transform: translateY(0); } 25% { transform: translateY(-34px); } }
+@keyframes sz-dehnen { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(160deg); } }
+@keyframes sz-wandern { from { transform: translateX(-30px); } to { transform: translateX(40px); } }
+@keyframes sz-rollen { from { transform: translateX(-6px); } to { transform: translateX(12px); } }
+@keyframes sz-tippen { from { transform: translateY(0); } to { transform: translateY(-22px); } }
+@keyframes sz-drehen { to { transform: rotate(360deg); } }
+@keyframes sz-bogen-x { from { transform: translateX(110px); } to { transform: translateX(290px); } }
+@keyframes sz-bogen-y { from { transform: translateY(150px); } to { transform: translateY(60px); } }
+@keyframes sz-puls { from { stroke-dashoffset: 420; } to { stroke-dashoffset: -420; } }
+@keyframes sz-herz { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+@keyframes sz-wolke { to { transform: translateX(40px); } }
+.sz-winken { transform-box: fill-box; transform-origin: top center; }
+@media (prefers-reduced-motion: no-preference) {
+  .sz-atmen { animation: sz-atmen 4s ease-in-out infinite alternate; }
+  .sz-winken { animation: sz-winken 2s ease-in-out infinite; }
+}
+@keyframes sz-atmen { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+@keyframes sz-winken { 0%, 60%, 100% { transform: rotate(0); } 15%, 45% { transform: rotate(-150deg); } 30% { transform: rotate(-125deg); } }

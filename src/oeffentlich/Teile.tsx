@@ -107,10 +107,11 @@ export function Abschnitt({ titel, unter, link, linkText = 'Alle anzeigen', chil
   );
 }
 
-export function SeitenKopf({ titel, unter, krumen, bild, children }: { titel: string; unter?: React.ReactNode; krumen?: { text: string; zu?: string }[]; bild?: string; children?: React.ReactNode }) {
+export function SeitenKopf({ titel, unter, krumen, bild, szene, children }: { titel: string; unter?: React.ReactNode; krumen?: { text: string; zu?: string }[]; bild?: string; szene?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="held rasen-linien relative overflow-hidden text-white">
       {bild && <img src={bild} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity" />}
+      {szene && <div className="absolute inset-y-0 right-0 hidden w-[55%] opacity-90 [mask-image:linear-gradient(90deg,transparent,#000_35%)] md:block" aria-hidden>{szene}</div>}
       <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-10">
         {krumen && (
           <nav aria-label="Brotkrumen" className="mb-3 flex flex-wrap items-center gap-1.5 text-sm text-white/70">
