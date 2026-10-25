@@ -338,12 +338,12 @@ export function beispielDaten(): Datenbestand {
   // ---- Gegner-Datenbank: Vereine aus der Umgebung (Logos lädt der Admin mit Erlaubnis des Vereins hoch) ----
   const gm = (zusatz: string, sportart: string, kategorie: Mannschaft['kategorie']) => ({ id: id('gm'), zusatz, sportart, kategorie });
   const gegner: Gegnerverein[] = [
-    { id: 'gv1', name: 'Dessauer SV 97', ort: 'Dessau-Roßlau', farbe: '#1d4ed8', webseite: 'https://www.dessauer-sv97.de', mannschaften: [gm('', 'Fußball', 'Herren'), gm('II', 'Fußball', 'Herren'), gm('AH', 'Fußball', 'Senioren'), gm('', 'Fußball', 'Frauen'), gm('', 'Fußball', 'Jugend')] },
-    { id: 'gv2', name: 'ASG Vorwärts Dessau', ort: 'Dessau-Roßlau', farbe: '#ca8a04', mannschaften: [gm('', 'Fußball', 'Herren'), gm('II', 'Fußball', 'Herren')] },
+    { id: 'gv1', name: 'Dessauer SV 97', logo: `${BASIS}gegner/dessauer-sv-97.webp`, ort: 'Dessau-Roßlau', farbe: '#1d4ed8', webseite: 'https://www.dessauer-sv97.de', mannschaften: [gm('', 'Fußball', 'Herren'), gm('II', 'Fußball', 'Herren'), gm('AH', 'Fußball', 'Senioren'), gm('', 'Fußball', 'Frauen'), gm('', 'Fußball', 'Jugend')] },
+    { id: 'gv2', name: 'ASG Vorwärts Dessau', logo: `${BASIS}gegner/asg-vorwaerts-dessau.webp`, ort: 'Dessau-Roßlau', farbe: '#ca8a04', mannschaften: [gm('', 'Fußball', 'Herren'), gm('II', 'Fußball', 'Herren')] },
     { id: 'gv3', name: 'SV Dessau 05', ort: 'Dessau-Roßlau', farbe: '#b91c1c', mannschaften: [gm('', 'Fußball', 'Herren'), gm('', 'Fußball', 'Jugend')] },
-    { id: 'gv4', name: 'FC Eintracht Köthen', ort: 'Köthen', farbe: '#7f1d1d', mannschaften: [gm('', 'Fußball', 'Herren'), gm('AH', 'Fußball', 'Senioren')] },
-    { id: 'gv5', name: 'TSV Rot-Weiß Zerbst', ort: 'Zerbst', farbe: '#dc2626', mannschaften: [gm('', 'Fußball', 'Herren'), gm('', 'Fußball', 'Jugend')] },
-    { id: 'gv6', name: 'SV Oranienbaum', ort: 'Oranienbaum-Wörlitz', farbe: '#ea580c', mannschaften: [gm('', 'Fußball', 'Frauen')] },
+    { id: 'gv4', name: 'FC Eintracht Köthen', logo: `${BASIS}gegner/fc-eintracht-koethen.webp`, ort: 'Köthen', farbe: '#7f1d1d', mannschaften: [gm('', 'Fußball', 'Herren'), gm('AH', 'Fußball', 'Senioren')] },
+    { id: 'gv5', name: 'TSV Rot-Weiß Zerbst', logo: `${BASIS}gegner/tsv-rot-weiss-zerbst.webp`, ort: 'Zerbst', farbe: '#dc2626', mannschaften: [gm('', 'Fußball', 'Herren'), gm('', 'Fußball', 'Jugend')] },
+    { id: 'gv6', name: 'SV Oranienbaum', logo: `${BASIS}gegner/sv-oranienbaum.webp`, ort: 'Oranienbaum-Wörlitz', farbe: '#ea580c', mannschaften: [gm('', 'Fußball', 'Frauen')] },
     ...['FSV Elbaue (Beispiel)', 'SG Kühnau (Beispiel)', 'Grün-Weiß Mildensee (Beispiel)', 'SV Waldersee (Beispiel)', 'Eintracht Ziebigk (Beispiel)', 'VfB Törten (Beispiel)', 'SG Kochstedt (Beispiel)', 'FC Mosigkau (Beispiel)'].map((name, i) => ({ id: `gvf${i}`, name, farbe: ['#0369a1', '#15803d', '#a16207', '#4338ca', '#9f1239', '#0f766e', '#6d28d9', '#c2410c'][i], mannschaften: [gm('', 'Fußball', 'Herren'), gm('', 'Fußball', 'Frauen'), gm('', 'Fußball', 'Jugend')] })),
     ...BADMINTON_GEGNER.map((name, i) => ({ id: `gvb${i}`, name, farbe: ['#0f766e', '#7c3aed', '#be123c', '#1d4ed8'][i], mannschaften: [gm('', 'Badminton', 'Erwachsene' as const)] })),
   ];
