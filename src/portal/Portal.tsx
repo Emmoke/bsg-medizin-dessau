@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Bell, CalendarDays, FileText, UserCircle, Users, ClipboardCheck, Trophy, Camera, Newspaper, Images, Handshake, Building2,
-  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard, Swords, Globe, BookOpen, Wallet, Mail, Megaphone, BarChart3, BadgeCheck, ShieldCheck,
+  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard, Swords, Globe, BookOpen, Wallet, Mail, Megaphone, BarChart3, BadgeCheck, ShieldCheck, ShoppingBag,
 } from 'lucide-react';
 import { Link, navigiere, usePfad } from '../router';
 import { speicherFehler, useDaten } from '../daten/speicher';
@@ -24,6 +24,8 @@ import { Werbung } from './Werbung';
 import { Besucher } from './Besucher';
 import { Logo } from './Logo';
 import { Datenschutz } from './Datenschutz';
+import { ShopVerwaltung } from './ShopVerwaltung';
+import { ZweiFaktorSperre, useZweiFaktorSperre } from './ZweiFaktor';
 
 export interface SeitenProps { d: Datenbestand; b: Benutzer }
 interface Eintrag { pfad: string; text: string; icon: typeof Bell; recht: Recht; seite: (p: SeitenProps) => React.ReactNode; zahl?: (d: Datenbestand, b: Benutzer) => number }
@@ -47,6 +49,7 @@ const BEREICHE: { titel: string; eintraege: Eintrag[] }[] = [
   { titel: 'Verwaltung', eintraege: [
     { pfad: '/admin', text: 'Dashboard', icon: LayoutDashboard, recht: 'admin.zugang', seite: (p) => <Dashboard {...p} /> },
     { pfad: '/admin/finanzen', text: 'Finanzen & Kasse', icon: Wallet, recht: 'finanzen.verwalten', seite: (p) => <Finanzen {...p} />, zahl: (d) => d.finanzbelege.filter((b) => b.typ === 'rechnung' && b.status === 'offen' && !!b.faellig && b.faellig < new Date().toISOString().slice(0, 10)).length },
+    { pfad: '/admin/shop', text: 'Fanshop', icon: ShoppingBag, recht: 'shop.verwalten', seite: (p) => <ShopVerwaltung {...p} />, zahl: (d) => d.bestellungen.filter((b) => b.status === 'neu').length },
     { pfad: '/admin/email', text: 'E-Mail & Rundschreiben', icon: Mail, recht: 'email.senden', seite: (p) => <EmailCenter {...p} /> },
     { pfad: '/admin/werbung', text: 'Werbung & Social Media', icon: Megaphone, recht: 'werbung.erstellen', seite: (p) => <Werbung {...p} /> },
     { pfad: '/admin/besucher', text: 'Besucher', icon: BarChart3, recht: 'statistik.sehen', seite: (p) => <Besucher {...p} /> },
@@ -66,7 +69,7 @@ const BEREICHE: { titel: string; eintraege: Eintrag[] }[] = [
     { pfad: '/admin/formulare', text: 'Anträge & Anfragen', icon: Inbox, recht: 'formulare.verwalten', seite: (p) => <FormulareVerwaltung {...p} />,
       zahl: (d) => d.antraege.filter((a) => a.status === 'neu').length + d.anfragen.filter((a) => a.status === 'neu').length },
     { pfad: '/admin/dokumente', text: 'Dokumente', icon: FolderOpen, recht: 'dokumente.verwalten', seite: (p) => <DokumenteVerwaltung {...p} /> },
-    { pfad: '/admin/benutzer', text: 'Benutzer & Rollen', icon: UserCog, recht: 'benutzer.verwalten', seite: (p) => <BenutzerVerwaltung {...p} /> },
+    { pfad: '/admin/benutzer', text: 'Benutzer & Rollen', icon: UserCog, recht: 'benutzer.verwalten', seite: (p) => <BenutzerVerwaltung {...p} />, zahl: (d) => d.benutzer.filter((x) => !x.aktiv && x.registriertAm && !x.letzteAnmeldung).length },
     { pfad: '/admin/rechte', text: 'Rechteverwaltung', icon: KeyRound, recht: 'rechte.verwalten', seite: (p) => <RechteVerwaltung {...p} /> },
     { pfad: '/admin/sicherung', text: 'Datensicherung', icon: DatabaseBackup, recht: 'sicherung.verwalten', seite: (p) => <Sicherung {...p} /> },
     { pfad: '/admin/protokoll', text: 'Protokoll', icon: History, recht: 'statistik.sehen', seite: (p) => <ProtokollAnsicht {...p} /> },
@@ -97,18 +100,20 @@ export function Portal({ pfad }: { pfad: string }) {
   }, []);
   const laedt = useAnmeldungLaedt();
   const ohneProfil = useKontoOhneProfil();
+  const sperre = useZweiFaktorSperre(b, d.verein);
   useEffect(() => { if (!b && !laedt && !ohneProfil) navigiere('/login', true); }, [b, laedt, ohneProfil]);
   useEffect(() => { document.title = `Portal | ${d.verein.kurzname}`; }, [d.verein.kurzname]);
   if (ohneProfil) return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-center">
       <div className="max-w-md rounded-2xl bg-white p-8 shadow ring-1 ring-slate-200">
         <p className="text-lg font-bold">Konto noch nicht freigeschaltet</p>
-        <p className="mt-2 text-sm text-slate-600">Die Anmeldung hat geklappt, aber für dieses Konto gibt es noch kein Benutzerprofil im Verein oder es ist gesperrt. Bitte an den Vorstand bzw. Administrator wenden.</p>
+        <p className="mt-2 text-sm text-slate-600">Die Anmeldung hat geklappt, aber das Konto ist noch nicht freigeschaltet (z. B. Registrierung wird geprüft) oder gesperrt. Bitte etwas Geduld bzw. an den Vorstand wenden.</p>
         <button onClick={() => { abmelden(); navigiere('/'); }} className="mt-5 rounded-lg bg-primaer px-4 py-2 font-medium text-white">Abmelden</button>
       </div>
     </div>
   );
-  if (!b) return laedt ? <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500"><span className="animate-pulse">Vereinsportal wird geladen …</span></div> : null;
+  if (b && sperre) return <ZweiFaktorSperre verein={d.verein} />;
+  if (!b) return laedt ?<div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500"><span className="animate-pulse">Vereinsportal wird geladen …</span></div> : null;
 
   const bereiche = BEREICHE.map((g) => ({ ...g, eintraege: g.eintraege.filter((e) => hatRecht(b, e.recht, d)) })).filter((g) => g.eintraege.length);
   const alle = BEREICHE.flatMap((g) => g.eintraege);

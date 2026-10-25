@@ -1,0 +1,18 @@
+rules_version = '2';
+// Firebase Storage (nur mit Blaze-Tarif, beim Bauen mit VITE_STORAGE=1 eingeschaltet): Bilder und Dokumente des
+// Vereinsportals unter medien/<inhalts-hash>. Lesen öffentlich (wie die Webseite), Hochladen nur für aktive Benutzer,
+// nur Bilder und PDFs bis 10 MB. Löschen nur für Administratoren und Vorstand (Abgleich mit Firestore).
+service firebase.storage {
+  match /b/{bucket}/o {
+    function profil() { return firestore.get(/databases/(default)/documents/benutzer/$(request.auth.uid)).data; }
+    function aktiv() { return request.auth != null && firestore.exists(/databases/(default)/documents/benutzer/$(request.auth.uid)) && profil().aktiv == true; }
+
+    match /medien/{datei} {
+      allow read: if true;
+      allow create: if aktiv() && request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
+      allow delete: if aktiv() && (profil().rolle == 'admin' || profil().rolle == 'vorstand');
+    }
+    match /{alles=**} { allow read, write: if false; }
+  }
+}

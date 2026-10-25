@@ -107,6 +107,7 @@ export function WebseiteVerwaltung({ d }: SeitenProps) {
       <Kopf titel="Webseite" beschreibung="Titelfoto und Untertitel der Startseite, Links-Seite und Vereinsheim."
         aktionen={<><Knopf disabled={!geaendert} onClick={() => setV(d.verein)}>Verwerfen</Knopf><Knopf art="primaer" disabled={!geaendert} onClick={() => { vereinAendern(v, 'Webseite geändert'); hinweis('Gespeichert'); }}>Speichern</Knopf></>} />
       <div className="grid gap-6 lg:grid-cols-2">
+        <DomainKarte verein={d.verein} />
         <Karte titel="Startseite">
           <div className="space-y-4">
             <BildWahl wert={v.titelbild} onChange={(b) => setze('titelbild', b)} label="Titelfoto (großes Bild oben, weitere Fotos aus der Galerie wechseln automatisch)" maxBreite={2000} />
@@ -142,6 +143,55 @@ export function WebseiteVerwaltung({ d }: SeitenProps) {
         </Karte>
       </div>
     </>
+  );
+}
+
+// ---------------- Domain & Vereinspostfächer ----------------
+type DnsStand = { a: boolean; mx: boolean } | 'fehler' | null;
+
+async function dnsPruefen(name: string): Promise<DnsStand> {
+  try {
+    const frage = async (typ: string) => ((await (await fetch(`https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${typ}`)).json()) as { Status: number; Answer?: unknown[] });
+    const [a, mx] = await Promise.all([frage('A'), frage('MX')]);
+    return { a: a.Status === 0 && !!a.Answer?.length, mx: mx.Status === 0 && !!mx.Answer?.length };
+  } catch { return 'fehler'; }
+}
+
+function DomainKarte({ verein }: { verein: Verein }) {
+  const [w, setW] = useState(verein.domain ?? { name: 'bsg-medizin-dessau.de', info: 'info@bsg-medizin-dessau.de', vorstand: 'vorstand@bsg-medizin-dessau.de', shop: 'shop@bsg-medizin-dessau.de' });
+  const [dns, setDns] = useState<DnsStand>(null);
+  const [laeuft, setLaeuft] = useState(false);
+  const uebernommen = verein.email === w.info;
+  const pruefen = async () => { setLaeuft(true); setDns(await dnsPruefen(w.name)); setLaeuft(false); };
+  const uebernehmen = () => {
+    if (dns && dns !== 'fehler' && !dns.mx && !bestaetigen('Für die Domain sind noch keine Postfächer (MX-Eintrag) eingerichtet – E-Mails an diese Adressen kämen nicht an. Trotzdem übernehmen?')) return;
+    vereinAendern({
+      domain: w, email: w.info,
+      vorstand: verein.vorstand.map((p, i) => (i === 0 ? { ...p, email: w.vorstand } : p)),
+      ...(verein.shop && { shop: { ...verein.shop, email: w.shop } }),
+      impressum: verein.impressum.split(verein.email).join(w.info),
+      datenschutz: verein.datenschutz.split(verein.email).join(w.info),
+    }, `Vereinsadressen auf ${w.name} umgestellt`);
+    hinweis('Adressen übernommen: Kontakt, Vorstand, Shop, Impressum und Datenschutz');
+  };
+  return (
+    <Karte titel="Domain & Vereinspostfächer" className="lg:col-span-2" aktionen={uebernommen ? <Marke ton="gruen">aktiv</Marke> : <Marke ton="gelb">vorbereitet</Marke>}>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Feld label="Domain"><Eingabe value={w.name} onChange={(e) => setW({ ...w, name: e.target.value.trim().toLowerCase() })} /></Feld>
+        <Feld label="Allgemein (Kontakt, Impressum)"><Eingabe type="email" value={w.info} onChange={(e) => setW({ ...w, info: e.target.value })} /></Feld>
+        <Feld label="Vorstand"><Eingabe type="email" value={w.vorstand} onChange={(e) => setW({ ...w, vorstand: e.target.value })} /></Feld>
+        <Feld label="Fanshop"><Eingabe type="email" value={w.shop} onChange={(e) => setW({ ...w, shop: e.target.value })} /></Feld>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Knopf onClick={pruefen} laedt={laeuft}><Search className="h-4 w-4" />Domain prüfen</Knopf>
+        <Knopf art="primaer" onClick={uebernehmen} disabled={uebernommen}><Check className="h-4 w-4" />Adressen übernehmen</Knopf>
+        {dns === 'fehler' && <span className="text-sm text-rose-600">Prüfung nicht möglich – bitte später erneut versuchen.</span>}
+        {dns && dns !== 'fehler' && <span className="flex gap-2 text-sm"><Marke ton={dns.a ? 'gruen' : 'rot'}>Webseite {dns.a ? 'erreichbar' : 'kein DNS-Eintrag'}</Marke><Marke ton={dns.mx ? 'gruen' : 'rot'}>Postfächer {dns.mx ? 'eingerichtet' : 'fehlen (MX)'}</Marke></span>}
+      </div>
+      <p className="mt-3 text-xs text-slate-500">
+        Ablauf: Domain bei einem Anbieter registrieren (z. B. IONOS, Strato, INWX) → Postfächer info@, vorstand@ und shop@ anlegen → in Firebase Hosting „Benutzerdefinierte Domain hinzufügen“ und die angezeigten DNS-Einträge beim Anbieter eintragen (HTTPS-Zertifikat kommt automatisch) → hier prüfen und übernehmen. Für den automatischen E-Mail-Versand das Postfach als VEREIN_SMTP_ADRESSE hinterlegen (README).
+      </p>
+    </Karte>
   );
 }
 

@@ -29,6 +29,8 @@ jobs:
         env:
           BASIS: /${{ github.event.repository.name }}/
           DOMAIN: https://${{ github.repository_owner }}.github.io
+          VITE_APPCHECK: ${{ vars.APPCHECK_SCHLUESSEL }}
+          VITE_STORAGE: ${{ vars.STORAGE }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

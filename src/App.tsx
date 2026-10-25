@@ -9,7 +9,8 @@ import { VereinSeite, type VereinTeil } from './oeffentlich/Verein';
 import { MannschaftDetail, MannschaftenUebersicht, TrainerUebersicht } from './oeffentlich/Mannschaften';
 import { Spielbericht, Spielbetrieb, type SpielbetriebTeil } from './oeffentlich/Spielbetrieb';
 import { Album, Galerie, Login, NewsArtikel, NewsListe, NichtGefunden, Sponsoren, Veranstaltungen } from './oeffentlich/Inhalte';
-import { Kontakt, MitgliedWerden } from './oeffentlich/Formulare';
+import { Kontakt, MitgliedWerden, Registrieren } from './oeffentlich/Formulare';
+import { ArtikelSeite, Kasse, Rechtstext, Shop, Warenkorb } from './oeffentlich/Shop';
 import { Portal } from './portal/Portal';
 import { Archiv, Besucherstatistik, Gaestebuch, Links, Vereinsheim } from './oeffentlich/Extras';
 import { Fortschritt, nachOben, useSeitenBewegung, weichesScrollen } from './effekte/bewegung';
@@ -48,6 +49,13 @@ function OeffentlicheSeite({ pfad }: { pfad: string }) {
   if (pfad === '/links') return <Links />;
   if (pfad === '/gaestebuch') return <Gaestebuch />;
   if (pfad === '/besucherstatistik') return <Besucherstatistik />;
+  if (pfad === '/registrieren') return <Registrieren />;
+  if (pfad === '/shop') return <Shop />;
+  if ((p = passt('/shop/:id', pfad))) return <ArtikelSeite id={p.id} />;
+  if (pfad === '/warenkorb') return <Warenkorb />;
+  if (pfad === '/kasse') return <Kasse />;
+  if (pfad === '/agb') return <Rechtstext art="agb" />;
+  if (pfad === '/widerruf') return <Rechtstext art="widerruf" />;
   return <NichtGefunden />;
 }
 

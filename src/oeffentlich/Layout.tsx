@@ -1,6 +1,8 @@
 // Rahmen der öffentlichen Seite: Kopfzeile mit Menü (Desktop-Aufklappmenüs, mobiles Menü), Fußzeile mit Sponsoren.
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, Menu, X, Mail, Phone, LogIn, MapPin, UserCircle } from 'lucide-react';
+import { ChevronDown, Menu, X, Mail, Phone, LogIn, MapPin, UserCircle, ShoppingCart } from 'lucide-react';
+import { useWarenkorb } from '../daten/shop';
+import { EinwilligungsHinweis, einstellungenOeffnen } from './Einwilligung';
 
 // Markenzeichen als schlichte Linien-Icons (lucide liefert keine Markenlogos mehr)
 const Facebook = (p: { className?: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>;
@@ -34,8 +36,20 @@ function useMenue(): Punkt[] {
     { text: 'Termine', zu: '/veranstaltungen' },
     { text: 'Galerie', zu: '/galerie' },
     { text: 'Sponsoren', zu: '/sponsoren' },
+    ...(d.verein.shop?.aktiv && d.artikel.some((a) => a.aktiv) ? [{ text: 'Fanshop', zu: '/shop' }] : []),
     { text: 'Kontakt', zu: '/kontakt' },
   ];
+}
+
+function KorbSymbol() {
+  const korb = useWarenkorb();
+  const n = korb.reduce((s, p) => s + p.menge, 0);
+  if (!n) return null;
+  return (
+    <Link to="/warenkorb" className="relative rounded-lg p-2 text-slate-700 hover:bg-slate-100" aria-label={`Warenkorb (${n} Artikel)`}>
+      <ShoppingCart className="h-6 w-6" /><span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-akzent px-1 text-[11px] font-bold text-white">{n}</span>
+    </Link>
+  );
 }
 
 function Aufklapp({ p }: { p: Punkt }) {
@@ -115,6 +129,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {menue.map((p) => <Aufklapp key={p.text} p={p} />)}
           </nav>
           <div className="flex items-center gap-2">
+            <KorbSymbol />
             <Link to="/mitglied-werden" className="hidden rounded-full bg-akzent px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-105 sm:inline-flex">Mitglied werden</Link>
             <button className="rounded-lg p-2 text-slate-700 hover:bg-slate-100 xl:hidden" onClick={() => setMobil(!mobil)} aria-label="Menü" aria-expanded={mobil}>
               {mobil ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -182,6 +197,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Für Mitglieder</h3>
             <ul className="space-y-1.5 text-sm">
               <li><Link to="/login" className="hover:text-white">Login Mitgliederbereich</Link></li>
+              {v.registrierungAktiv && <li><Link to="/registrieren" className="hover:text-white">Registrieren</Link></li>}
+              {v.shop?.aktiv && <li><Link to="/shop" className="hover:text-white">Fanshop</Link></li>}
               <li><Link to="/trainer" className="hover:text-white">Trainerbereich</Link></li>
               <li><Link to="/admin" className="hover:text-white">Verwaltung</Link></li>
             </ul>
@@ -190,10 +207,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="border-t border-white/10">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-xs text-slate-500 sm:px-6">
             <span>© {new Date().getFullYear()} {v.name}</span>
-            <span className="flex gap-4"><Link to="/impressum" className="hover:text-white">Impressum</Link><Link to="/datenschutz" className="hover:text-white">Datenschutz</Link><Link to="/kontakt" className="hover:text-white">Kontakt</Link></span>
+            <span className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link to="/impressum" className="hover:text-white">Impressum</Link><Link to="/datenschutz" className="hover:text-white">Datenschutz</Link>
+              {v.shop?.aktiv && <><Link to="/agb" className="hover:text-white">AGB</Link><Link to="/widerruf" className="hover:text-white">Widerruf</Link></>}
+              <button onClick={einstellungenOeffnen} className="hover:text-white">Cookie-Einstellungen</button>
+              <Link to="/kontakt" className="hover:text-white">Kontakt</Link>
+            </span>
           </div>
         </div>
       </footer>
+      <EinwilligungsHinweis />
     </div>
   );
 }

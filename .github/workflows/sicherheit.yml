@@ -1,0 +1,26 @@
+name: Sicherheit einrichten (Zwei-Faktor + Passwortrichtlinie)
+
+# Einmalig von Hand starten (Actions → „Sicherheit einrichten“ → Run workflow), nachdem in der Firebase-Konsole
+# auf „Firebase Authentication with Identity Platform“ umgestellt wurde. Benötigt das Secret FIREBASE_DIENSTKONTO.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  einrichten:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_DIENSTKONTO: ${{ secrets.FIREBASE_DIENSTKONTO }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Einschalten
+        run: |
+          if [ -z "$FIREBASE_DIENSTKONTO" ]; then echo "::error::Secret FIREBASE_DIENSTKONTO fehlt (siehe README)"; exit 1; fi
+          npm install --no-save --prefix /tmp/sicherheit firebase-admin@13
+          cp werkzeuge/sicherheit-einrichten.mjs /tmp/sicherheit/
+          node /tmp/sicherheit/sicherheit-einrichten.mjs

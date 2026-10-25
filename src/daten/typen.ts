@@ -52,6 +52,46 @@ export interface Verein {
   /** Versand: über das eigene E-Mail-Programm oder automatisch über das Vereinspostfach (GitHub-Job, siehe README) */
   emailEinstellungen?: { versand: 'programm' | 'automatisch'; absenderName: string; signatur: string };
   rechteVersion?: number;
+  /** Fanshop: Versand, Zahlarten, AGB und Widerrufsbelehrung */
+  shop?: ShopEinstellungen;
+  /** Eigene Domain und Vereinspostfächer (info@, vorstand@, shop@) */
+  domain?: { name: string; info: string; vorstand: string; shop: string };
+  /** Selbstregistrierung im Mitgliederbereich erlauben (Konto wartet auf Freischaltung) */
+  registrierungAktiv?: boolean;
+  /** Administratoren müssen sich mit zweitem Faktor (Authenticator-App) anmelden – wird in firestore.rules erzwungen */
+  zweiFaktorPflicht?: boolean;
+}
+
+export type Zahlart = 'paypal' | 'ueberweisung' | 'bar' | 'stripe';
+export interface ShopEinstellungen {
+  aktiv: boolean;
+  email: string;
+  versandkosten: number;
+  /** Versandkostenfrei ab Bestellwert (0 = nie) */
+  versandfreiAb: number;
+  versandMoeglich: boolean;
+  abholort: string;
+  zahlarten: Zahlart[];
+  /** PayPal.me-Name, z. B. "BSGMedizin" → paypal.me/BSGMedizin/24.90EUR */
+  paypalMe?: string;
+  /** Stripe Payment Link (Betrag frei wählbar), z. B. https://buy.stripe.com/… */
+  stripeLink?: string;
+  hinweis?: string;
+  agb: string;
+  widerruf: string;
+}
+export interface ShopArtikel { id: string; name: string; beschreibung: string; preis: number; bild?: string; kategorie: string; varianten: string[]; ausverkauft?: boolean; aktiv: boolean; reihenfolge: number }
+export interface BestellPosition { artikelId: string; name: string; variante?: string; menge: number; preis: number }
+export interface Bestellung {
+  id: string; nummer: string; datum: string;
+  kunde: { name: string; email: string; telefon?: string; strasse?: string; plzOrt?: string };
+  positionen: BestellPosition[]; versand: 'abholung' | 'versand'; versandkosten: number; zahlart: Zahlart;
+  status: 'neu' | 'bezahlt' | 'versendet' | 'abgeholt' | 'storniert'; notiz?: string;
+  /** Zustimmung zu AGB, Widerrufsbelehrung und Datenschutz mit Zeitpunkt (Nachweis) */
+  zustimmung: { agb: boolean; datenschutz: boolean; zeit: string };
+  /** Bestellbestätigung per E-Mail: "offen" → der E-Mail-Job verschickt sie */
+  bestaetigung: 'offen' | 'gesendet' | 'fehler' | 'manuell';
+  rechnungId?: string; bezahltAm?: string;
 }
 
 export interface Finanzeinstellungen {
@@ -212,6 +252,9 @@ export interface Benutzer {
   aktiv: boolean;
   letzteAnmeldung?: string;
   telefon?: string;
+  /** Selbst registriert: Zeitpunkt der Einwilligung in die Datenschutzerklärung */
+  registriertAm?: string;
+  einwilligung?: string;
 }
 
 export interface Mitglied {
@@ -274,6 +317,8 @@ export interface Datenbestand {
   buchungen: Buchung[];
   finanzbelege: Finanzbeleg[];
   postausgang: Postausgang[];
+  artikel: ShopArtikel[];
+  bestellungen: Bestellung[];
   protokoll: Protokolleintrag[];
   /** Öffentliche Geburtstagsliste (nur Mitglieder mit Einwilligung, Nachname abgekürzt) – für Gäste ohne Zugriff auf die Mitgliederliste */
   geburtstagsliste?: { vorname: string; nachname: string; datum: string; jahr: number }[];

@@ -1,0 +1,57 @@
+name: Firebase Hosting und Sicherheitsregeln
+
+# Bei jeder Änderung: Webseite auf Firebase Hosting (eigene Domain, HTTPS-Zertifikat automatisch) veröffentlichen und
+# die Sicherheitsregeln (firestore.rules, storage.rules) einspielen. Benötigt das Secret FIREBASE_DIENSTKONTO
+# (Dienstkonto mit den Rollen „Firebase Hosting-Administrator“ und „Firebase Rules-Administrator“).
+# Optional (Settings → Variables): APPCHECK_SCHLUESSEL (reCAPTCHA v3), STORAGE=1 (nur mit Blaze-Tarif), DOMAIN.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase
+  cancel-in-progress: true
+
+jobs:
+  veroeffentlichen:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_DIENSTKONTO: ${{ secrets.FIREBASE_DIENSTKONTO }}
+    steps:
+      - name: Prüfen, ob eingerichtet
+        id: pruefen
+        run: |
+          if [ -z "$FIREBASE_DIENSTKONTO" ]; then
+            echo "::notice::Firebase Hosting ist noch nicht eingerichtet (Secret FIREBASE_DIENSTKONTO) – übersprungen. Die Seite läuft weiter über GitHub Pages."
+            echo "aktiv=nein" >> "$GITHUB_OUTPUT"
+          else
+            echo "aktiv=ja" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.pruefen.outputs.aktiv == 'ja'
+      - uses: actions/setup-node@v4
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Bauen
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        run: npm ci && npm test && npm run build
+        env:
+          BASIS: /
+          DOMAIN: ${{ vars.DOMAIN || 'https://bsg-medizin-dessau.web.app' }}
+          VITE_APPCHECK: ${{ vars.APPCHECK_SCHLUESSEL }}
+          VITE_STORAGE: ${{ vars.STORAGE }}
+      - name: Veröffentlichen
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        run: |
+          echo "$FIREBASE_DIENSTKONTO" > "$RUNNER_TEMP/konto.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/konto.json"
+          ZIELE="hosting,firestore:rules"
+          if [ "${{ vars.STORAGE }}" = "1" ]; then ZIELE="$ZIELE,storage"; fi
+          npx --yes firebase-tools@13 deploy --only "$ZIELE" --project bsg-medizin-dessau --non-interactive
+          rm -f "$RUNNER_TEMP/konto.json"

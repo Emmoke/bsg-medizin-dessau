@@ -8,7 +8,7 @@ import { passwortHash } from '../daten/sha256';
 import { CLOUD } from '../daten/modus';
 import { fehlerText, kontoAnlegen } from '../daten/firebase';
 import { passwortLinkSenden } from '../daten/anmeldung';
-import { alsDatum, bilanz, datumKurz, ibanMaskieren, uhrzeit } from '../daten/auswertung';
+import { alsDatum, alterAm, bilanz, datumKurz, ibanMaskieren, uhrzeit } from '../daten/auswertung';
 import type { Antrag, Benutzer, Datenbestand } from '../daten/typen';
 import { Auswahl, Dialog, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, bestaetigen, hinweis } from '../ui/bausteine';
 import type { SeitenProps } from './Portal';
@@ -41,6 +41,9 @@ export function Dashboard({ d }: SeitenProps) {
   const entwuerfe = d.news.filter((n) => n.status === 'entwurf');
   const abteilungen = [...new Set(aktiv.map((m) => m.abteilung.replace('Fußball – ', '')))].map((a) => [a, aktiv.filter((m) => m.abteilung.replace('Fußball – ', '') === a).length] as const).sort((a, b) => b[1] - a[1]);
   const maxAbt = Math.max(1, ...abteilungen.map(([, n]) => n));
+  const GRUPPEN: [string, number, number][] = [['bis 6', 0, 6], ['7–14', 7, 14], ['15–18', 15, 18], ['19–26', 19, 26], ['27–40', 27, 40], ['41–60', 41, 60], ['über 60', 61, 200]];
+  const altersgruppen = [...GRUPPEN.map(([g, von, bis]) => [g, aktiv.filter((m) => { if (!m.geburtsdatum) return false; const a = alterAm(m.geburtsdatum, jetzt); return a >= von && a <= bis; }).length] as const), ['unbekannt', aktiv.filter((m) => !m.geburtsdatum).length] as const].filter(([g, n]) => n > 0 || g !== 'unbekannt');
+  const maxAlter = Math.max(1, ...altersgruppen.map(([, n]) => n));
   const aufgaben = [
     ...neueAntraege.map((a) => ({ text: `Mitgliedsantrag von ${a.vorname} ${a.nachname} prüfen`, zu: '/admin/formulare' })),
     ...neueAnfragen.map((a) => ({ text: `Anfrage beantworten: ${a.betreff}`, zu: '/admin/formulare' })),
@@ -64,6 +67,10 @@ export function Dashboard({ d }: SeitenProps) {
         <Karte titel="Mitglieder nach Abteilung">
           <ul className="space-y-2">{abteilungen.map(([a, n]) => <li key={a} className="flex items-center gap-3 text-sm"><span className="w-40 truncate">{a}</span><div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-primaer" style={{ width: `${(n / maxAbt) * 100}%` }} /></div><span className="zahlen w-8 text-right font-semibold">{n}</span></li>)}</ul>
         </Karte>
+        <Karte titel="Mitglieder nach Altersgruppe" aktionen={<span className="text-xs text-slate-400">Gruppen wie LSB-Bestandserhebung</span>}>
+          <ul className="space-y-2">{altersgruppen.map(([g, n]) => <li key={g} className="flex items-center gap-3 text-sm"><span className="w-24">{g}</span><div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-akzent" style={{ width: `${(n / maxAlter) * 100}%` }} /></div><span className="zahlen w-8 text-right font-semibold">{n}</span></li>)}</ul>
+          <p className="mt-3 text-xs text-slate-500">Eintritte {jetzt.getFullYear()}: <b>{aktiv.filter((m) => m.eintritt.startsWith(String(jetzt.getFullYear()))).length}</b> · Fanshop offen: <b>{d.bestellungen.filter((b) => b.status === 'neu').length}</b> · offene Registrierungen: <b>{d.benutzer.filter((x) => !x.aktiv && x.registriertAm && !x.letzteAnmeldung).length}</b></p>
+        </Karte>
         <Karte titel={`Bilanz Saison ${d.verein.saison}`}>
           <ul className="divide-y divide-slate-100">{d.mannschaften.map((m) => ({ m, b: bilanz(d.spiele.filter((s) => s.mannschaftId === m.id && s.saison === d.verein.saison)) })).filter((x) => x.b.spiele).map(({ m, b }) => (
             <li key={m.id} className="flex items-center justify-between py-2 text-sm"><span className="flex items-center gap-2"><Trophy className="h-4 w-4 text-akzent" />{m.name}</span><span className="zahlen"><b className="text-emerald-600">{b.s}</b>-<b className="text-amber-500">{b.u}</b>-<b className="text-rose-600">{b.n}</b> · {b.tore}:{b.gegentore}</span></li>
@@ -78,10 +85,15 @@ export function Dashboard({ d }: SeitenProps) {
 }
 
 // ---------------- Benutzer & Rollen ----------------
+/** Startpasswort nach der Passwortrichtlinie: 14 Zeichen mit Groß-, Kleinbuchstaben und Zahlen */
 function zufallsPasswort(): string {
-  const z = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const werte = crypto.getRandomValues(new Uint32Array(10));
-  return Array.from(werte, (w) => z[w % z.length]).join('') + '7';
+  const klein = 'abcdefghjkmnpqrstuvwxyz', gross = 'ABCDEFGHJKLMNPQRSTUVWXYZ', zahl = '23456789', alle = klein + gross + zahl;
+  const vorrat = [gross, klein, zahl];
+  const zeichen = Array.from(crypto.getRandomValues(new Uint32Array(14)), (x, i) => { const z = vorrat[i] ?? alle; return z[x % z.length]; });
+  // mischen, damit die festen Zeichenklassen nicht immer vorne stehen
+  for (let i = zeichen.length - 1; i > 0; i--) { const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1); [zeichen[i], zeichen[j]] = [zeichen[j], zeichen[i]]; }
+  const pw = zeichen.join('');
+  return /(.)\1\1/.test(pw) ? zufallsPasswort() : pw;
 }
 
 export function BenutzerVerwaltung({ d, b }: SeitenProps) {
@@ -121,7 +133,7 @@ export function BenutzerVerwaltung({ d, b }: SeitenProps) {
   return (
     <>
       <Kopf titel="Benutzer & Rollen" beschreibung="Zugänge für Vorstand, Trainer, Redakteure und Mitglieder. Passwörter werden nur verschlüsselt gespeichert."
-        aktionen={<Knopf art="primaer" onClick={() => setOffen({ id: neueId('u'), vorname: '', nachname: '', email: '', rolle: 'mitglied', mannschaftIds: [], passwortHash: '', aktiv: true, neuesPasswort: zufallsPasswort() })}><Plus className="h-4 w-4" />Benutzer</Knopf>} />
+        aktionen={<><Schalter an={!!d.verein.registrierungAktiv} onChange={(an) => vereinAendern({ registrierungAktiv: an }, `Selbstregistrierung ${an ? 'eingeschaltet' : 'ausgeschaltet'}`)} label="Selbstregistrierung erlauben" /><Knopf art="primaer" onClick={() => setOffen({ id: neueId('u'), vorname: '', nachname: '', email: '', rolle: 'mitglied', mannschaftIds: [], passwortHash: '', aktiv: true, neuesPasswort: zufallsPasswort() })}><Plus className="h-4 w-4" />Benutzer</Knopf></>} />
       <Reiter aktiv={rolle} onChange={setRolle} werte={[{ id: 'alle', text: 'Alle', zahl: d.benutzer.length }, ...ROLLEN.map((r) => ({ id: r.id, text: r.name, zahl: d.benutzer.filter((x) => x.rolle === r.id).length }))]} />
       <Karte innen={false}>
         <ul className="divide-y divide-slate-100">{liste.map((x) => (
@@ -130,7 +142,9 @@ export function BenutzerVerwaltung({ d, b }: SeitenProps) {
             <div className="min-w-0 flex-1"><p className="font-semibold">{x.vorname} {x.nachname}{x.id === b.id && <span className="ml-2 text-xs text-slate-400">(du)</span>}</p><p className="text-xs text-slate-500">{x.email} · zuletzt {x.letzteAnmeldung ? `${datumKurz(x.letzteAnmeldung)} ${uhrzeit(x.letzteAnmeldung)}` : 'nie'}</p></div>
             <span className="flex flex-wrap gap-1">{x.mannschaftIds.map((m) => <Marke key={m}>{d.mannschaften.find((y) => y.id === m)?.kurz ?? m}</Marke>)}</span>
             <Marke ton={x.rolle === 'admin' ? 'rot' : x.rolle === 'vorstand' ? 'lila' : x.rolle === 'trainer' ? 'blau' : x.rolle === 'redakteur' ? 'gelb' : 'grau'}>{rollenName(x.rolle)}</Marke>
-            {!x.aktiv && <Marke>gesperrt</Marke>}
+            {!x.aktiv && (x.registriertAm && !x.letzteAnmeldung
+              ? <><Marke ton="gelb">Registrierung {datumKurz(x.registriertAm).slice(4)}</Marke><Knopf klein art="primaer" onClick={() => { aktualisieren('benutzer', x.id, { aktiv: true }, `Registrierung freigeschaltet: ${x.vorname} ${x.nachname}`); hinweis('Freigeschaltet – die Person kann sich jetzt anmelden'); }}><Check className="h-4 w-4" />Freischalten</Knopf></>
+              : <Marke>gesperrt</Marke>)}
             <button onClick={() => setOffen({ ...x })} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-primaer" aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></button>
           </li>
         ))}</ul>

@@ -1,9 +1,10 @@
 // Inhaltsseiten: News, Veranstaltungskalender, Galerie mit Großansicht, Sponsoren, Login und "nicht gefunden".
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarPlus, ChevronLeft, ChevronRight, MapPin, Clock, X, PlayCircle, ExternalLink, LogIn, Search } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, ChevronLeft, ChevronRight, MapPin, Clock, X, PlayCircle, ExternalLink, LogIn, Search, ShieldCheck } from 'lucide-react';
 import { Link, navigiere } from '../router';
 import { useDaten } from './daten';
-import { anmelden, passwortLinkSenden, useBenutzer } from '../daten/anmeldung';
+import { anmelden, passwortLinkSenden, useBenutzer, zweitenFaktorBestaetigen } from '../daten/anmeldung';
+import { useEinwilligung } from './Einwilligung';
 import { CLOUD } from '../daten/modus';
 import { alsDatum, alsIcs, datumKurz, datumLang, monatsName, tagIso, uhrzeit } from '../daten/auswertung';
 import type { Medium, Termin } from '../daten/typen';
@@ -208,6 +209,7 @@ export function Album({ id }: { id: string }) {
   useSeite(a?.titel ?? 'Album', a?.beschreibung);
   const [gross, setGross] = useState<number | null>(null);
   const [video, setVideo] = useState<string | null>(null);
+  const einwilligung = useEinwilligung();
   useEffect(() => {
     if (gross == null || !a) return;
     const taste = (e: KeyboardEvent) => {
@@ -226,8 +228,8 @@ export function Album({ id }: { id: string }) {
       <Inhalt>
         {a.videos.length > 0 && (
           <div className="mb-8 grid gap-4 sm:grid-cols-2">
-            {a.videos.map((v) => video === v.id ? (
-              <iframe key={v.id} className="aspect-video w-full rounded-2xl" src={`https://www.youtube-nocookie.com/embed/${v.youtubeId}?autoplay=1`} title={v.titel} allow="autoplay; encrypted-media" allowFullScreen />
+            {a.videos.map((v) => video === v.id || einwilligung?.extern ? (
+              <iframe key={v.id} className="aspect-video w-full rounded-2xl" src={`https://www.youtube-nocookie.com/embed/${v.youtubeId}${video === v.id ? '?autoplay=1' : ''}`} title={v.titel} allow="autoplay; encrypted-media" allowFullScreen />
             ) : (
               <button key={v.id} onClick={() => setVideo(v.id)} className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-2xl bg-slate-900 text-white">
                 <PlayCircle className="h-16 w-16 transition group-hover:scale-110" />
@@ -310,12 +312,22 @@ export function Login() {
   const [fehler, setFehler] = useState('');
   useEffect(() => { if (benutzer) navigiere('/intern', true); }, [benutzer]);
   const [laeuft, setLaeuft] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
   const absenden = async (e: React.FormEvent) => {
     e.preventDefault();
     setLaeuft(true);
+    if (code !== null) {
+      const f = await zweitenFaktorBestaetigen(code);
+      setLaeuft(false);
+      if (f) setFehler(f);
+      return;
+    }
     const r = await anmelden(email, passwort);
     setLaeuft(false);
-    if (!r.ok) setFehler(r.fehler);
+    if (!r.ok) {
+      if (r.zweiterFaktor) { setCode(''); setFehler(''); return; }
+      setFehler(r.fehler);
+    }
   };
   const vergessen = async () => {
     if (!/^\S+@\S+\.\S+$/.test(email)) return setFehler('Bitte zuerst die E-Mail-Adresse eintragen.');
@@ -331,13 +343,23 @@ export function Login() {
           <h1 className="text-2xl font-extrabold">Anmelden</h1>
           <p className="mt-1 text-sm text-slate-500">Mitglieder-, Trainer- und Verwaltungsbereich</p>
         </div>
-        <form onSubmit={absenden} className="space-y-4">
-          <Feld label="E-Mail"><Eingabe type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></Feld>
-          <Feld label="Passwort" fehler={fehler}><Eingabe type="password" autoComplete="current-password" required value={passwort} onChange={(e) => setPasswort(e.target.value)} /></Feld>
-          <Knopf type="submit" art="primaer" className="w-full" laedt={laeuft}>Anmelden</Knopf>
-        </form>
+        {code !== null ? (
+          <form onSubmit={absenden} className="space-y-4">
+            <p className="flex items-start gap-2 rounded-xl bg-primaer/5 p-3 text-sm text-slate-700"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primaer" />Dieses Konto ist mit Zwei-Faktor-Anmeldung geschützt. Bitte den 6-stelligen Code aus deiner Authenticator-App eingeben.</p>
+            <Feld label="Code aus der App" fehler={fehler}><Eingabe inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]{6,7}" required autoFocus value={code} onChange={(e) => setCode(e.target.value)} className="zahlen text-center text-2xl tracking-[0.4em]" /></Feld>
+            <Knopf type="submit" art="primaer" className="w-full" laedt={laeuft}>Bestätigen</Knopf>
+            <button type="button" onClick={() => { setCode(null); setFehler(''); }} className="block w-full text-center text-sm text-slate-500 hover:underline">Zurück</button>
+          </form>
+        ) : (
+          <form onSubmit={absenden} className="space-y-4">
+            <Feld label="E-Mail"><Eingabe type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></Feld>
+            <Feld label="Passwort" fehler={fehler}><Eingabe type="password" autoComplete="current-password" required value={passwort} onChange={(e) => setPasswort(e.target.value)} /></Feld>
+            <Knopf type="submit" art="primaer" className="w-full" laedt={laeuft}>Anmelden</Knopf>
+          </form>
+        )}
         {CLOUD ? <button type="button" onClick={vergessen} className="mt-4 block w-full text-center text-sm font-medium text-primaer hover:underline">Passwort vergessen?</button>
           : <p className="mt-4 text-center text-xs text-slate-500">Passwort vergessen? Bitte an den Vorstand bzw. Administrator wenden – er setzt es im Adminbereich zurück.</p>}
+        {d.verein.registrierungAktiv && <p className="mt-3 text-center text-sm text-slate-600">Noch kein Zugang? <Link to="/registrieren" className="font-semibold text-primaer hover:underline">Jetzt registrieren</Link></p>}
         {demo && (
           <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-xs text-amber-900 ring-1 ring-amber-200">
             <p className="mb-2 font-bold">Demo-Zugänge (vor dem Livegang im Admin ändern):</p>

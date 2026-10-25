@@ -1,6 +1,7 @@
 // Formulare: Online-Mitgliedsantrag (4 Schritte, SEPA, Einwilligungen) und Kontaktformular (mit Spamschutz).
 import { useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Send, ShieldCheck, PartyPopper } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Send, ShieldCheck, PartyPopper, UserPlus } from 'lucide-react';
+import { passwortPruefen, passwortStaerke, registrieren } from '../daten/anmeldung';
 import { Link } from '../router';
 import { hinzufuegen, jetztIso, neueId } from '../daten/speicher';
 import { useDaten } from './daten';
@@ -154,12 +155,75 @@ export function MitgliedWerden() {
   );
 }
 
+export function Registrieren() {
+  const d = useDaten();
+  const v = d.verein;
+  useSeite('Registrieren', `Zugang zum Mitgliederbereich der ${v.name} beantragen.`);
+  const [w, setW] = useState({ vorname: '', nachname: '', email: '', passwort: '', wiederholung: '', einwilligung: false, webseite: '' });
+  const [fehler, setFehler] = useState<Record<string, string>>({});
+  const [laeuft, setLaeuft] = useState(false);
+  const [fertig, setFertig] = useState(false);
+  const [start] = useState(Date.now());
+  const pwFehler = w.passwort ? passwortPruefen(w.passwort, false, w.email) : null;
+  const staerke = passwortStaerke(w.passwort);
+  const absenden = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const f: Record<string, string> = {};
+    if (!w.vorname.trim()) f.vorname = 'Bitte angeben';
+    if (!w.nachname.trim()) f.nachname = 'Bitte angeben';
+    if (!/^\S+@\S+\.\S+$/.test(w.email)) f.email = 'Gültige E-Mail angeben';
+    if (!w.passwort || pwFehler) f.passwort = pwFehler ?? 'Bitte angeben';
+    if (w.wiederholung !== w.passwort) f.wiederholung = 'Stimmt nicht überein';
+    if (!w.einwilligung) f.einwilligung = 'Bitte zustimmen';
+    setFehler(f);
+    if (Object.keys(f).length) return;
+    if (w.webseite || Date.now() - start < 3000) { setFertig(true); return; }
+    setLaeuft(true);
+    const r = await registrieren(w);
+    setLaeuft(false);
+    if (r) return setFehler({ email: r });
+    setFertig(true);
+  };
+  if (!v.registrierungAktiv) return <><SeitenKopf titel="Registrieren" /><Inhalt schmal><p>Die Registrierung ist derzeit geschlossen. Zugänge vergibt der Vorstand – bitte über das <Link to="/kontakt" className="text-primaer underline">Kontaktformular</Link> melden.</p></Inhalt></>;
+  return (
+    <>
+      <SeitenKopf titel="Registrieren" krumen={[{ text: 'Registrieren' }]} unter="Zugang zum Mitgliederbereich: Termine, Dokumente, Mitteilungen und Spielzusagen. Der Verein prüft jede Registrierung und schaltet das Konto frei." />
+      <Inhalt schmal>
+        <div className="rounded-3xl bg-white p-6 ring-1 ring-slate-200 sm:p-8">
+          {fertig ? (
+            <div className="ein py-6 text-center">
+              <Check className="mx-auto h-14 w-14 rounded-full bg-emerald-100 p-3 text-emerald-600" />
+              <h2 className="mt-4 text-2xl font-extrabold">Registrierung eingegangen</h2>
+              <p className="mt-2 text-slate-600">Bitte bestätige deine E-Mail-Adresse über den Link in deinem Postfach. Sobald der Verein dein Konto freigeschaltet hat, kannst du dich anmelden.</p>
+              <Link to="/" className="mt-6 inline-flex rounded-full bg-primaer px-6 py-3 font-semibold text-white">Zur Startseite</Link>
+            </div>
+          ) : (
+            <form onSubmit={absenden} className="grid gap-4 sm:grid-cols-2">
+              <Feld label="Vorname *" fehler={fehler.vorname}><Eingabe value={w.vorname} onChange={(e) => setW({ ...w, vorname: e.target.value })} autoComplete="given-name" /></Feld>
+              <Feld label="Nachname *" fehler={fehler.nachname}><Eingabe value={w.nachname} onChange={(e) => setW({ ...w, nachname: e.target.value })} autoComplete="family-name" /></Feld>
+              <Feld label="E-Mail *" fehler={fehler.email} className="sm:col-span-2"><Eingabe type="email" value={w.email} onChange={(e) => setW({ ...w, email: e.target.value })} autoComplete="email" /></Feld>
+              <Feld label="Passwort *" fehler={fehler.passwort ?? pwFehler ?? undefined} hinweis="Mind. 10 Zeichen mit Groß-, Kleinbuchstaben und Zahl">
+                <Eingabe type="password" value={w.passwort} onChange={(e) => setW({ ...w, passwort: e.target.value })} autoComplete="new-password" />
+                <span className="mt-1.5 flex gap-1" aria-hidden>{[0, 1, 2, 3].map((i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i < staerke ? (staerke >= 3 ? 'bg-emerald-500' : 'bg-amber-400') : 'bg-slate-200'}`} />)}</span>
+              </Feld>
+              <Feld label="Passwort wiederholen *" fehler={fehler.wiederholung}><Eingabe type="password" value={w.wiederholung} onChange={(e) => setW({ ...w, wiederholung: e.target.value })} autoComplete="new-password" /></Feld>
+              <input type="text" tabIndex={-1} autoComplete="off" className="hidden" value={w.webseite} onChange={(e) => setW({ ...w, webseite: e.target.value })} aria-hidden />
+              <label className="flex items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" className="mt-1" checked={w.einwilligung} onChange={(e) => setW({ ...w, einwilligung: e.target.checked })} /><span>Ich willige ein, dass Name und E-Mail-Adresse für den Zugang zum Mitgliederbereich gespeichert werden. Die <Link to="/datenschutz" target="_blank" className="text-primaer underline">Datenschutzerklärung</Link> habe ich gelesen. Die Einwilligung kann ich jederzeit widerrufen. *{fehler.einwilligung && <span className="block text-xs text-rose-600">{fehler.einwilligung}</span>}</span></label>
+              <div className="flex flex-wrap items-center gap-4 sm:col-span-2"><Knopf type="submit" art="primaer" laedt={laeuft}><UserPlus className="h-4 w-4" />Registrieren</Knopf><Link to="/login" className="text-sm text-slate-600 hover:underline">Schon registriert? Anmelden</Link></div>
+            </form>
+          )}
+        </div>
+      </Inhalt>
+    </>
+  );
+}
+
 export function Kontakt() {
   const d = useDaten();
   const v = d.verein;
   useSeite('Kontakt', `Kontakt zur ${v.name}: Vorstand, Jugendabteilung, Sponsoring.`);
   const parameter = new URLSearchParams(location.search);
-  const [w, setW] = useState({ name: '', email: '', betreff: parameter.get('betreff') ?? '', nachricht: '', an: parameter.get('an') ?? v.kontaktEmpfaenger[0] ?? 'Vorstand', webseite: '' });
+  const [w, setW] = useState({ name: '', email: '', betreff: parameter.get('betreff') ?? '', nachricht: '', an: parameter.get('an') ?? v.kontaktEmpfaenger[0] ?? 'Vorstand', webseite: '', einwilligung: false });
   const [gesendet, setGesendet] = useState(false);
   const [fehler, setFehler] = useState('');
   const [start] = useState(Date.now());
@@ -168,6 +232,7 @@ export function Kontakt() {
     // Spamschutz: verstecktes Feld muss leer bleiben, und Menschen brauchen mehr als 3 Sekunden
     if (w.webseite || Date.now() - start < 3000) { setGesendet(true); return; }
     if (!w.name.trim() || !/^\S+@\S+\.\S+$/.test(w.email) || w.nachricht.trim().length < 10) { setFehler('Bitte Name, gültige E-Mail und eine Nachricht (mind. 10 Zeichen) angeben.'); return; }
+    if (!w.einwilligung) { setFehler('Bitte der Speicherung deiner Angaben zustimmen.'); return; }
     hinzufuegen('anfragen', { id: neueId('q'), datum: jetztIso(), name: w.name, email: w.email, betreff: w.betreff || '(ohne Betreff)', nachricht: w.nachricht, an: w.an, status: 'neu' }, `Neue Kontaktanfrage an ${w.an}`);
     setGesendet(true);
   };
@@ -188,7 +253,7 @@ export function Kontakt() {
                 <Feld label="Nachricht *" className="sm:col-span-2"><Textbereich rows={6} value={w.nachricht} onChange={(e) => setW({ ...w, nachricht: e.target.value })} /></Feld>
                 <input type="text" name="webseite" tabIndex={-1} autoComplete="off" className="hidden" value={w.webseite} onChange={(e) => setW({ ...w, webseite: e.target.value })} aria-hidden />
                 {fehler && <p className="text-sm text-rose-600 sm:col-span-2">{fehler}</p>}
-                <p className="text-xs text-slate-500 sm:col-span-2">Mit dem Absenden stimmst du der Verarbeitung deiner Angaben zur Beantwortung zu (siehe <Link to="/datenschutz" className="underline">Datenschutz</Link>).</p>
+                <label className="flex items-start gap-3 text-sm text-slate-600 sm:col-span-2"><input type="checkbox" className="mt-1" checked={w.einwilligung} onChange={(e) => setW({ ...w, einwilligung: e.target.checked })} /><span>Ich willige ein, dass meine Angaben zur Beantwortung meiner Anfrage gespeichert werden. Nach Erledigung werden sie gelöscht (siehe <Link to="/datenschutz" className="underline">Datenschutz</Link>). *</span></label>
                 <div className="sm:col-span-2"><Knopf type="submit" art="primaer"><Send className="h-4 w-4" />Absenden</Knopf></div>
               </form>
             )}

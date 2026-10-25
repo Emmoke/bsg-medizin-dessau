@@ -1,0 +1,47 @@
+name: Datensicherung (verschlüsselt)
+
+# Täglich um 3:15 Uhr (MEZ): komplette Firestore-Datenbank sichern, mit AES-256 verschlüsseln und 30 Tage als Artefakt
+# aufbewahren. Benötigt die Repository-Secrets FIREBASE_DIENSTKONTO und SICHERUNG_SCHLUESSEL (langes Passwort).
+on:
+  schedule:
+    - cron: '15 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sichern:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_DIENSTKONTO: ${{ secrets.FIREBASE_DIENSTKONTO }}
+      SICHERUNG_SCHLUESSEL: ${{ secrets.SICHERUNG_SCHLUESSEL }}
+    steps:
+      - name: Prüfen, ob eingerichtet
+        id: pruefen
+        run: |
+          if [ -z "$FIREBASE_DIENSTKONTO" ] || [ -z "$SICHERUNG_SCHLUESSEL" ]; then
+            echo "::notice::Datensicherung ist noch nicht eingerichtet (Secrets FIREBASE_DIENSTKONTO und SICHERUNG_SCHLUESSEL) – übersprungen."
+            echo "aktiv=nein" >> "$GITHUB_OUTPUT"
+          else
+            echo "aktiv=ja" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.pruefen.outputs.aktiv == 'ja'
+      - uses: actions/setup-node@v4
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        with:
+          node-version: 22
+      - name: Sichern
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        run: |
+          npm install --no-save --prefix /tmp/sicherung firebase-admin@13
+          cp werkzeuge/sicherung.mjs /tmp/sicherung/
+          node /tmp/sicherung/sicherung.mjs
+      - uses: actions/upload-artifact@v4
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        with:
+          name: sicherung-${{ github.run_number }}
+          path: sicherung/*.sicherung
+          retention-days: 30
+          if-no-files-found: error

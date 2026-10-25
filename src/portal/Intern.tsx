@@ -7,9 +7,10 @@ import { eigenesPasswortSetzen, passwortPruefen } from '../daten/anmeldung';
 import { hatRecht } from '../daten/rechte';
 import { alsDatum, datumKurz, naechsteSpiele, paarung, uhrzeit } from '../daten/auswertung';
 import type { Benutzer, Datenbestand, Sichtbarkeit, Zusage } from '../daten/typen';
-import { Auswahl, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Schalter, Textbereich, hinweis } from '../ui/bausteine';
+import { Auswahl, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import { Veranstaltungen } from '../oeffentlich/Inhalte';
 import { sichtbareMitteilung, type SeitenProps } from './Portal';
+import { ZweiFaktorKarte, braucht2FA } from './ZweiFaktor';
 
 export function darfDokument(s: Sichtbarkeit, b: Benutzer): boolean {
   if (s === 'oeffentlich' || s === 'mitglieder') return true;
@@ -167,7 +168,9 @@ export function Dokumente({ d, b }: SeitenProps) {
 export function Profil({ d, b }: SeitenProps) {
   const [w, setW] = useState({ vorname: b.vorname, nachname: b.nachname, telefon: b.telefon ?? '' });
   const [pw, setPw] = useState({ neu: '', wiederholung: '' });
-  const pwFehler = pw.neu ? passwortPruefen(pw.neu) : null;
+  const streng = braucht2FA(b);
+  const pwFehler = pw.neu ? passwortPruefen(pw.neu, streng, b.email) : null;
+  const [loeschantrag, setLoeschantrag] = useState(false);
   const teams = d.mannschaften.filter((m) => b.mannschaftIds.includes(m.id));
   return (
     <>
@@ -183,7 +186,7 @@ export function Profil({ d, b }: SeitenProps) {
         </Karte>
         <Karte titel="Passwort ändern">
           <div className="space-y-4">
-            <Feld label="Neues Passwort" fehler={pwFehler ?? undefined} hinweis="Mindestens 8 Zeichen mit Buchstaben und Zahlen"><Eingabe type="password" autoComplete="new-password" value={pw.neu} onChange={(e) => setPw({ ...pw, neu: e.target.value })} /></Feld>
+            <Feld label="Neues Passwort" fehler={pwFehler ?? undefined} hinweis={`Mindestens ${streng ? 12 : 10} Zeichen mit Groß-, Kleinbuchstaben und Zahl`}><Eingabe type="password" autoComplete="new-password" value={pw.neu} onChange={(e) => setPw({ ...pw, neu: e.target.value })} /></Feld>
             <Feld label="Wiederholen" fehler={pw.wiederholung && pw.wiederholung !== pw.neu ? 'Stimmt nicht überein' : undefined}><Eingabe type="password" autoComplete="new-password" value={pw.wiederholung} onChange={(e) => setPw({ ...pw, wiederholung: e.target.value })} /></Feld>
             <Knopf art="primaer" disabled={!pw.neu || !!pwFehler || pw.neu !== pw.wiederholung} onClick={async () => { const f = await eigenesPasswortSetzen(b, pw.neu); if (f) return hinweis(f, 'fehler'); setPw({ neu: '', wiederholung: '' }); hinweis('Passwort geändert'); }}>Passwort ändern</Knopf>
           </div>
@@ -197,7 +200,18 @@ export function Profil({ d, b }: SeitenProps) {
             a.download = 'meine-daten.json';
             a.click();
           }}>Meine Daten herunterladen (Art. 15 DSGVO)</Knopf>
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <p className="text-sm font-medium">Konto und Daten löschen lassen (Art. 17 DSGVO)</p>
+            <p className="mt-1 text-xs text-slate-500">Der Vorstand löscht deinen Zugang und alle Daten, die nicht aus gesetzlichen Gründen (z. B. Steuerrecht) aufbewahrt werden müssen, und bestätigt dir das per E-Mail.</p>
+            <Knopf art="gefahr" klein className="mt-2" disabled={loeschantrag} onClick={() => {
+              if (!bestaetigen('Löschung deines Kontos und deiner Daten beim Vorstand beantragen?')) return;
+              hinzufuegen('anfragen', { id: neueId('q'), datum: jetztIso(), name: `${b.vorname} ${b.nachname}`, email: b.email, betreff: 'Löschantrag (Art. 17 DSGVO)', nachricht: `Ich beantrage die Löschung meines Benutzerkontos (${b.email}) und meiner personenbezogenen Daten, soweit keine gesetzliche Aufbewahrungspflicht besteht.`, an: 'Vorstand', status: 'neu' }, 'Löschantrag gestellt');
+              setLoeschantrag(true);
+              hinweis('Löschantrag an den Vorstand gesendet');
+            }}>{loeschantrag ? 'Antrag gestellt' : 'Löschung beantragen'}</Knopf>
+          </div>
         </Karte>
+        {braucht2FA(b) && <ZweiFaktorKarte verein={d.verein} />}
       </div>
     </>
   );

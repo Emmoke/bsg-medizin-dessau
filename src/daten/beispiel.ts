@@ -4,7 +4,7 @@
 // Badminton-Freundschaftsspiele, Trainingseinheiten, Anträge und Anfragen. Diese im Admin ersetzen bzw. löschen.
 import type { Album, Benutzer, Datenbestand, Gegnerverein, Mannschaft, Mitglied, News, Spiel, Spielereignis, Spieler, Tabellenzeile, Training, Verein } from './typen';
 import { bilanz, sortiereTabelle } from './auswertung';
-import { datenschutzMuster } from './rechtstexte';
+import { agbMuster, datenschutzMuster, widerrufMuster } from './rechtstexte';
 import { STANDARD_RECHTE } from './rechte';
 import { passwortHash } from './sha256';
 
@@ -125,6 +125,18 @@ export function beispielDaten(): Datenbestand {
   };
 
   verein.datenschutz = datenschutzMuster(verein);
+  // Eigene Domain mit Vereinspostfächern – wird übernommen, sobald die Domain eingerichtet ist (Admin → Webseite → Domain & E-Mail)
+  verein.domain = { name: 'bsg-medizin-dessau.de', info: 'info@bsg-medizin-dessau.de', vorstand: 'vorstand@bsg-medizin-dessau.de', shop: 'shop@bsg-medizin-dessau.de' };
+  verein.registrierungAktiv = true;
+  verein.zweiFaktorPflicht = false;
+  // Bis die Domain-Postfächer existieren, laufen Shop-Anfragen über die bisherige Vereinsadresse
+  const shopAngaben = { ...verein, shopEmail: verein.email, abholort: 'beim Training oder nach Absprache', versandkosten: 4.95 };
+  verein.shop = {
+    aktiv: true, email: verein.email, versandkosten: 4.95, versandfreiAb: 60, versandMoeglich: true, abholort: shopAngaben.abholort,
+    zahlarten: ['ueberweisung', 'paypal', 'bar'], paypalMe: '', stripeLink: '',
+    hinweis: 'Alle Erlöse fließen in die Jugend- und Vereinsarbeit.',
+    agb: agbMuster(shopAngaben), widerruf: widerrufMuster(shopAngaben),
+  };
 
   // ---- Abteilungen / Gruppen (Angaben von bsg-medizin.de) ----
   const k = (name: string, amt: string) => ({ id: id('k'), name, amt });
@@ -381,6 +393,20 @@ export function beispielDaten(): Datenbestand {
       { id: 'fb2', typ: 'angebot', nummer: `A-${new Date().getFullYear()}-001`, datum: zeitpunkt(-5).slice(0, 10), faellig: zeitpunkt(25).slice(0, 10), empfaenger: { name: 'Beispiel GmbH', zusatz: 'z. Hd. Geschäftsführung', strasse: 'Industriestraße 3', plzOrt: '06847 Dessau-Roßlau' }, einleitung: 'vielen Dank für Ihr Interesse an einer Partnerschaft mit unserem Verein. Gern bieten wir Ihnen an:', positionen: [{ text: 'Logo auf der Vereinswebseite (Sponsorenseite und Laufband), 12 Monate', menge: 1, preis: 300 }, { text: 'Erwähnung in Social-Media-Beiträgen, 4 Beiträge', menge: 4, preis: 25 }], status: 'offen' },
     ],
     postausgang: [],    gaestebuch: [],
+    // Fanshop: Beispielartikel (Preise und Fotos im Admin unter „Fanshop“ anpassen)
+    artikel: [
+      { id: 'art1', name: 'Vereinsshirt „Sei mutig – mach mit!“', beschreibung: 'Funktionsshirt in Vereinsgrün mit Wappen auf der Brust. Atmungsaktiv, für Training und Freizeit.', preis: 19.9, kategorie: 'Bekleidung', varianten: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], aktiv: true, reihenfolge: 1 },
+      { id: 'art2', name: 'Kapuzenpullover', beschreibung: 'Warmer Hoodie mit gesticktem Vereinswappen und Schriftzug BSG Medizin auf dem Rücken.', preis: 39.9, kategorie: 'Bekleidung', varianten: ['S', 'M', 'L', 'XL', 'XXL'], aktiv: true, reihenfolge: 2 },
+      { id: 'art3', name: 'Kinder-Trainingsshirt', beschreibung: 'Leichtes Shirt für unsere Kleinsten – mit Wappen.', preis: 14.9, kategorie: 'Bekleidung', varianten: ['116', '128', '140', '152', '164'], aktiv: true, reihenfolge: 3 },
+      { id: 'art4', name: 'Fanschal', beschreibung: 'Gestrickter Schal in Grün-Rot mit Vereinsname.', preis: 14.9, kategorie: 'Fanartikel', varianten: [], aktiv: true, reihenfolge: 4 },
+      { id: 'art5', name: 'Trinkflasche', beschreibung: 'Edelstahl, 0,75 l, mit Vereinslogo – auslaufsicher.', preis: 12.9, kategorie: 'Fanartikel', varianten: [], aktiv: true, reihenfolge: 5 },
+      { id: 'art6', name: 'Sporttasche', beschreibung: 'Geräumige Tasche mit Schuhfach und Wappen.', preis: 29.9, kategorie: 'Fanartikel', varianten: [], aktiv: true, reihenfolge: 6 },
+    ],
+    bestellungen: [
+      { id: 'bs1', nummer: 'B-BEISPIEL-1', datum: zeitpunkt(-2, '19:12'), kunde: { name: 'Beispiel Kunde', email: 'kunde@example.com', strasse: 'Musterweg 2', plzOrt: '06847 Dessau-Roßlau' },
+        positionen: [{ artikelId: 'art1', name: 'Vereinsshirt „Sei mutig – mach mit!“', variante: 'M', menge: 2, preis: 19.9 }, { artikelId: 'art4', name: 'Fanschal', menge: 1, preis: 14.9 }],
+        versand: 'versand', versandkosten: 4.95, zahlart: 'ueberweisung', status: 'neu', zustimmung: { agb: true, datenschutz: true, zeit: zeitpunkt(-2, '19:12') }, bestaetigung: 'manuell' },
+    ],
     protokoll: [],
     aufrufe: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [zeitpunkt(-29 + i).slice(0, 10), 20 + Math.floor(r() * 50) + (i % 7 === 2 ? 30 : 0)])),
   };

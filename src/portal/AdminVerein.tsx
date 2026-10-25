@@ -4,6 +4,8 @@ import { Plus, Pencil, Trash2, Download, Upload, ArrowUp, ArrowDown, RefreshCw, 
 import { aktualisieren, hinzufuegen, entfernen, neueId, speichereEintrag, vereinAendern } from '../daten/speicher';
 import { bilanz, datumKurz, geburtstage, sortiereTabelle, slug, alterAm } from '../daten/auswertung';
 import { BildPlatzhalter, MannschaftsBild } from '../oeffentlich/SportSzene';
+import { excelHerunterladen } from '../daten/excel';
+import { jahresbetrag, summe } from '../daten/finanzen';
 import type { Beitrag, Chronikeintrag, Kategorie, Kontaktperson, Mannschaft, Mitglied, Spiel, Sportstaette, Tabelle, Tabellenzeile, Trainingszeit, Verein } from '../daten/typen';
 import { Auswahl, BildWahl, Dialog, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import type { SeitenProps } from './Portal';
@@ -340,6 +342,17 @@ export function MitgliederVerwaltung({ d }: SeitenProps) {
   const jahresbeitrag = aktiv.reduce((s, m) => { const bt = d.verein.beitraege.find((x) => x.id === m.beitragId); if (!bt) return s; return s + bt.betrag * (bt.intervall === 'monatlich' ? 12 : bt.intervall === 'vierteljährlich' ? 4 : 1); }, 0);
   const bald = geburtstage(d.mitglieder, new Date(), 14);
   const jugend = aktiv.filter((m) => m.geburtsdatum && alterAm(m.geburtsdatum, new Date()) < 18).length;
+  const offenJe = (m: Mitglied) => d.finanzbelege.filter((f) => f.typ === 'rechnung' && f.status === 'offen' && f.mitgliedId === m.id).reduce((s, f) => s + summe(f), 0);
+  const excel = () => {
+    const bt = (m: Mitglied) => d.verein.beitraege.find((x) => x.id === m.beitragId);
+    excelHerunterladen(`mitglieder-${new Date().toISOString().slice(0, 10)}`, [
+      { name: 'Mitglieder', zeilen: [['Nachname', 'Vorname', 'Geburtsdatum', 'Alter', 'E-Mail', 'Telefon', 'Straße', 'PLZ', 'Ort', 'Eintritt', 'Abteilung', 'Beitrag', 'Status', 'Geburtstagsgruß'],
+        ...liste.map((m) => [m.nachname, m.vorname, m.geburtsdatum, m.geburtsdatum ? alterAm(m.geburtsdatum, new Date()) : '', m.email, m.telefon, m.strasse, m.plz, m.ort, m.eintritt, m.abteilung, bt(m)?.name, m.status, m.geburtstagZeigen ? 'ja' : 'nein'])] },
+      { name: 'Beiträge', zeilen: [['Nachname', 'Vorname', 'Beitragsart', 'Betrag', 'Intervall', 'Jahresbeitrag (€)', 'Offene Rechnungen (€)'],
+        ...liste.filter((m) => m.status !== 'ausgetreten').map((m) => { const b = bt(m); return [m.nachname, m.vorname, b?.name, b?.betrag, b?.intervall, b ? jahresbetrag(b) : '', offenJe(m)]; })] },
+      { name: 'Beitragsordnung', zeilen: [['Beitragsart', 'Betrag (€)', 'Intervall', 'Jahresbetrag (€)', 'Mitglieder'], ...d.verein.beitraege.map((b) => [b.name, b.betrag, b.intervall, jahresbetrag(b), aktiv.filter((m) => m.beitragId === b.id).length])] },
+    ]);
+  };
   const exportieren = () => {
     const zeilen = [['Nachname', 'Vorname', 'Geburtsdatum', 'E-Mail', 'Telefon', 'Straße', 'PLZ', 'Ort', 'Eintritt', 'Abteilung', 'Beitrag', 'Status'],
       ...liste.map((m) => [m.nachname, m.vorname, m.geburtsdatum ?? '', m.email ?? '', m.telefon ?? '', m.strasse ?? '', m.plz ?? '', m.ort ?? '', m.eintritt, m.abteilung, d.verein.beitraege.find((x) => x.id === m.beitragId)?.name ?? '', m.status])];
@@ -351,7 +364,7 @@ export function MitgliederVerwaltung({ d }: SeitenProps) {
   return (
     <>
       <Kopf titel="Mitgliederverwaltung" beschreibung="Mitgliederliste mit Abteilung, Beitrag und Status. Neue Mitglieder entstehen auch aus angenommenen Online-Anträgen."
-        aktionen={<><Knopf onClick={exportieren}><Download className="h-4 w-4" />CSV-Export</Knopf><Knopf art="primaer" onClick={() => setOffen({ id: neueId('m'), vorname: '', nachname: '', eintritt: new Date().toISOString().slice(0, 10), abteilung: '', status: 'aktiv', geburtstagZeigen: false })}><Plus className="h-4 w-4" />Mitglied</Knopf></>} />
+        aktionen={<><Knopf onClick={excel}><Download className="h-4 w-4" />Excel-Export</Knopf><Knopf art="leise" onClick={exportieren}>CSV</Knopf><Knopf art="primaer" onClick={() => setOffen({ id: neueId('m'), vorname: '', nachname: '', eintritt: new Date().toISOString().slice(0, 10), abteilung: '', status: 'aktiv', geburtstagZeigen: false })}><Plus className="h-4 w-4" />Mitglied</Knopf></>} />
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kachel titel="Mitglieder" wert={aktiv.length} unter={`${d.mitglieder.filter((m) => m.status === 'passiv').length} passiv`} />
         <Kachel titel="Davon unter 18" wert={jugend} ton="gruen" />
@@ -371,7 +384,7 @@ export function MitgliederVerwaltung({ d }: SeitenProps) {
                 <td className="px-4 py-2.5"><p className="font-semibold">{m.nachname}, {m.vorname}</p><p className="text-xs text-slate-500">{m.email}</p></td>
                 <td>{m.geburtsdatum ? `${datumKurz(m.geburtsdatum).slice(4)} (${alterAm(m.geburtsdatum, new Date())})` : '–'}</td>
                 <td>{m.abteilung}</td>
-                <td>{d.verein.beitraege.find((x) => x.id === m.beitragId)?.name ?? '–'}</td>
+                <td>{d.verein.beitraege.find((x) => x.id === m.beitragId)?.name ?? '–'}{offenJe(m) > 0 && <span className="ml-1.5"><Marke ton="rot">{offenJe(m).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} offen</Marke></span>}</td>
                 <td>{datumKurz(m.eintritt).slice(4)}</td>
                 <td><Marke ton={m.status === 'aktiv' ? 'gruen' : m.status === 'passiv' ? 'gelb' : 'grau'}>{m.status}</Marke></td>
                 <td className="pr-3 text-right"><button onClick={() => setOffen(m)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-primaer" aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></button></td>

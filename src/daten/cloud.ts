@@ -5,14 +5,16 @@ import {
   collection, deleteDoc, doc, getDoc, increment, onSnapshot, query, setDoc, where, writeBatch, type QueryConstraint,
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from './firebase';
+import { getDownloadURL, ref, uploadString } from 'firebase/storage';
+import { auth, db, storage } from './firebase';
 import { cloudUebernehmen, lesen, setzeCloudHaken, vereinAendern } from './speicher';
 import { hatRecht, RECHTE_VERSION, rechteErgaenzen, type Recht } from './rechte';
 import { sha256 } from './sha256';
 import type { Benutzer, Datenbestand, Mitglied, Sammlung, Verein } from './typen';
 
 export const SAMMLUNGEN: Sammlung[] = ['mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente',
-  'gaestebuch', 'benutzer', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen', 'protokoll', 'buchungen', 'finanzbelege', 'postausgang'];
+  'gaestebuch', 'benutzer', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen', 'protokoll', 'buchungen', 'finanzbelege', 'postausgang',
+  'artikel', 'bestellungen'];
 
 /** Filter je Sammlung: null = nicht lesbar, [] = alles, sonst Bedingung [Feld, Operator, Wert] */
 type Bedingung = null | [] | [string, '==' | 'in', unknown];
@@ -37,6 +39,7 @@ function filter(s: Sammlung, b: Benutzer | null, v: Verein): Bedingung {
     case 'protokoll': return recht('statistik.sehen') ? [] : null;
     case 'buchungen': case 'finanzbelege': return recht('finanzen.verwalten') ? [] : null;
     case 'postausgang': return recht('email.senden') || recht('finanzen.verwalten') ? [] : null;
+    case 'bestellungen': return recht('shop.verwalten') ? [] : null;
     default: return [];
   }
 }
@@ -85,7 +88,12 @@ function auslagern<T>(wert: T): T {
     if (wert.startsWith('data:') && wert.length > GRENZE) {
       const id = sha256(wert).slice(0, 32);
       medienCache.set(id, wert);
-      if (!hochgeladen.has(id)) { hochgeladen.add(id); setDoc(doc(db, 'medien', id), { d: wert }).catch(meldeFehler); }
+      if (!hochgeladen.has(id)) {
+        hochgeladen.add(id);
+        // Mit Firebase Storage (Blaze-Tarif) als Datei, sonst als Firestore-Dokument
+        if (storage) uploadString(ref(storage, `medien/${id}`), wert, 'data_url').catch(meldeFehler);
+        else setDoc(doc(db, 'medien', id), { d: wert }).catch(meldeFehler);
+      }
       return `medien:${id}` as T;
     }
     return wert;
@@ -97,6 +105,9 @@ function auslagern<T>(wert: T): T {
 
 async function medium(id: string): Promise<string | null> {
   if (medienCache.has(id)) return medienCache.get(id)!;
+  if (storage) {
+    try { const url = await getDownloadURL(ref(storage, `medien/${id}`)); medienCache.set(id, url); return url; } catch { /* ältere Dateien liegen noch in Firestore */ }
+  }
   try {
     const d = await getDoc(doc(db, 'medien', id));
     const wert = d.exists() ? (d.data().d as string) : null;

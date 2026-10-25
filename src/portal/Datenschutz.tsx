@@ -1,14 +1,19 @@
 // Datenschutz & Sicherheit: DSGVO-Checkliste, Verarbeitungsverzeichnis, Löschkonzept, Datenauskunft (Art. 15),
 // Sicherheitsprüfung der Konten und Datenschutzerklärung mit aktuellem Mustertext.
 import { useState } from 'react';
-import { ShieldCheck, Download, Trash2, FileSearch, UserX, CheckCircle2, Circle, FileText } from 'lucide-react';
-import { aktualisieren, entfernen, vereinAendern } from '../daten/speicher';
+import { ShieldCheck, Download, Trash2, FileSearch, UserX, CheckCircle2, Circle, FileText, KeyRound } from 'lucide-react';
+import { aktualisieren, entfernen, hinzufuegen, jetztIso, neueId, vereinAendern } from '../daten/speicher';
+import { excelHerunterladen } from '../daten/excel';
+import { CLOUD } from '../daten/modus';
+import { APPCHECK_SCHLUESSEL } from '../daten/firebase';
+import { mitZweitemFaktorAngemeldet, zweiFaktorAktiv } from '../daten/anmeldung';
+import { ZweiFaktorKarte } from './ZweiFaktor';
 import { datumKurz } from '../daten/auswertung';
 import { datenschutzMuster } from '../daten/rechtstexte';
-import { Auswahl, Karte, Knopf, Kopf, Leer, Marke, Reiter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
+import { Auswahl, Eingabe, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import type { SeitenProps } from './Portal';
 
-type Bereich = 'uebersicht' | 'loeschen' | 'auskunft' | 'sicherheit' | 'erklaerung';
+type Bereich = 'uebersicht' | 'loeschen' | 'auskunft' | 'loeschung' | 'avv' | 'sicherheit' | 'erklaerung';
 const tageSeit = (iso?: string) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : Infinity);
 function herunterladen(text: string, name: string, typ = 'application/json') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: typ })); a.download = name; a.click(); }
 
@@ -17,10 +22,12 @@ export function Datenschutz(p: SeitenProps) {
   return (
     <>
       <Kopf titel="Datenschutz & Sicherheit" beschreibung="DSGVO im Verein: Checkliste, Löschfristen, Auskunft und Sicherheit der Zugänge." />
-      <Reiter aktiv={r} onChange={setR} werte={[{ id: 'uebersicht', text: 'Checkliste' }, { id: 'loeschen', text: 'Löschkonzept' }, { id: 'auskunft', text: 'Auskunft' }, { id: 'sicherheit', text: 'Sicherheit' }, { id: 'erklaerung', text: 'Datenschutzerklärung' }]} />
+      <Reiter aktiv={r} onChange={setR} werte={[{ id: 'uebersicht', text: 'Checkliste' }, { id: 'loeschen', text: 'Löschkonzept' }, { id: 'auskunft', text: 'Auskunft' }, { id: 'loeschung', text: 'Löschung (Art. 17)' }, { id: 'avv', text: 'Auftragsverarbeitung' }, { id: 'sicherheit', text: 'Sicherheit' }, { id: 'erklaerung', text: 'Datenschutzerklärung' }]} />
       {r === 'uebersicht' && <Checkliste {...p} />}
       {r === 'loeschen' && <Loeschkonzept {...p} />}
       {r === 'auskunft' && <Auskunft {...p} />}
+      {r === 'loeschung' && <Loeschung {...p} />}
+      {r === 'avv' && <Auftragsverarbeitung />}
       {r === 'sicherheit' && <Sicherheit {...p} />}
       {r === 'erklaerung' && <Erklaerung {...p} />}
     </>
@@ -37,8 +44,11 @@ function Checkliste({ d }: SeitenProps) {
     [!d.antraege.some((a) => a.iban && (a.status === 'angenommen' || a.status === 'abgelehnt')), 'Keine alten Bankdaten in Anträgen', 'IBAN nach Übernahme löschen (Löschkonzept).'],
     [v.namenKuerzen, 'Namen öffentlich abgekürzt', 'Spielernamen als „Max M.“ zeigen (Verein → Einstellungen).'],
     [!!v.finanzen?.bescheidDatum, 'Freistellungsbescheid hinterlegt', 'Für korrekte Spendenbescheinigungen (Finanzen → Einstellungen).'],
-    [true, 'Auftragsverarbeitung Google/Firebase', 'Firebase-Konsole → Projekteinstellungen → Datenschutz: Data Processing Terms akzeptieren.'],
+    [true, 'Auftragsverarbeitung Google/Firebase', 'Firebase-Konsole → Projekteinstellungen → Datenschutz: Data Processing Terms akzeptieren (Reiter „Auftragsverarbeitung“).'],
     [true, 'Fotoerlaubnis einholen', 'Vor Veröffentlichung von Fotos muss die Einwilligung („Fotoerlaubnis“) vorliegen.'],
+    [!v.shop?.aktiv || (!/Mustertext/.test(v.shop.agb) && !/Mustertext/.test(v.shop.widerruf)), 'AGB und Widerrufsbelehrung geprüft', 'Fanshop → Einstellungen: Mustertexte prüfen lassen und den Hinweis „Mustertext“ entfernen.'],
+    [!!v.zweiFaktorPflicht, 'Zwei-Faktor-Pflicht für Administratoren', 'Reiter „Sicherheit“: erst selbst einrichten (Mein Profil), dann Pflicht einschalten.'],
+    [!d.benutzer.some((b) => !b.aktiv && b.registriertAm && !b.letzteAnmeldung && tageSeit(b.registriertAm) > 30), 'Registrierungen bearbeitet', 'Offene Registrierungen innerhalb von 30 Tagen freischalten oder löschen (Benutzer & Rollen).'],
   ];
   const vvt = () => {
     const zeilen = [
@@ -50,8 +60,11 @@ function Checkliste({ d }: SeitenProps) {
       ['Portal-Zugänge', 'Mitglieder-/Trainerbereich', 'Art. 6 (1) b DSGVO', 'Benutzer', 'Name, E-Mail, Rolle, letzte Anmeldung', 'Firebase (Google, EU)', 'bei Löschung des Zugangs'],
       ['Webseite', 'Information, anonyme Statistik', 'Art. 6 (1) f DSGVO', 'Besucher', 'keine personenbezogenen Daten gespeichert', 'GitHub (Hosting)', '–'],
       ['Fotos', 'Öffentlichkeitsarbeit', 'Art. 6 (1) a DSGVO', 'Mitglieder', 'Bilder', 'Öffentlichkeit', 'bei Widerruf'],
+      ['Fanshop', 'Abwicklung von Bestellungen', 'Art. 6 (1) b, c DSGVO', 'Kunden', 'Name, E-Mail, Anschrift, Bestellung, Zahlungsstatus', 'Vorstand, Kassenwart; PayPal/Stripe (eigene Verantwortliche)', 'Bestellungen 6 Jahre, Rechnungen 10 Jahre'],
+      ['Registrierung', 'Zugang zum Mitgliederbereich', 'Art. 6 (1) a DSGVO', 'Interessenten, Mitglieder', 'Name, E-Mail, Zeitpunkt der Einwilligung', 'Firebase (Google, EU)', 'nicht freigeschaltet: 90 Tage'],
+      ['Datensicherung', 'Wiederherstellung bei Datenverlust', 'Art. 6 (1) f, Art. 32 DSGVO', 'alle', 'verschlüsselte Kopie der Datenbank', 'GitHub (verschlüsselt)', '30 Tage'],
     ];
-    herunterladen('﻿' + zeilen.map((z) => z.map((x) => `"${x}"`).join(';')).join('\n'), 'verzeichnis-verarbeitungstaetigkeiten.csv', 'text/csv');
+    excelHerunterladen('verzeichnis-verarbeitungstaetigkeiten', [{ name: 'Verarbeitungstätigkeiten', zeilen }]);
   };
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -62,7 +75,7 @@ function Checkliste({ d }: SeitenProps) {
       </Karte>
       <Karte titel="Verzeichnis der Verarbeitungstätigkeiten">
         <p className="text-sm text-slate-600">Jeder Verein muss dokumentieren, welche personenbezogenen Daten er wofür verarbeitet (Art. 30 DSGVO). Die Vorlage ist auf dieses Portal zugeschnitten.</p>
-        <Knopf art="primaer" className="mt-4" onClick={vvt}><Download className="h-4 w-4" />Verzeichnis herunterladen (CSV)</Knopf>
+        <Knopf art="primaer" className="mt-4" onClick={vvt}><Download className="h-4 w-4" />Verzeichnis herunterladen (Excel)</Knopf>
       </Karte>
     </div>
   );
@@ -74,11 +87,15 @@ function Loeschkonzept({ d }: SeitenProps) {
   const alteAnfragen = d.anfragen.filter((a) => a.status !== 'neu' && tageSeit(a.datum) > 365);
   const ausgetreten = d.mitglieder.filter((m) => m.status === 'ausgetreten');
   const altePost = d.postausgang.filter((p) => tageSeit(p.datum) > 365);
+  const offeneRegistrierungen = d.benutzer.filter((b) => !b.aktiv && b.registriertAm && !b.letzteAnmeldung && tageSeit(b.registriertAm) > 90);
+  const alteBestellungen = d.bestellungen.filter((b) => (b.status === 'storniert' && tageSeit(b.datum) > 365) || (b.status !== 'neu' && tageSeit(b.datum) > 6 * 365 && !b.rechnungId) || tageSeit(b.datum) > 10 * 365);
   const gruppen: { titel: string; text: string; anzahl: number; aktion: () => void; knopf: string }[] = [
     { titel: 'Bankdaten in erledigten Anträgen', text: 'IBAN und Kontoinhaber nach Übernahme in die Buchhaltung entfernen.', anzahl: ibanAntraege.length, knopf: 'Bankdaten entfernen', aktion: () => ibanAntraege.forEach((a) => aktualisieren('antraege', a.id, { iban: undefined, kontoinhaber: undefined }, 'Bankdaten aus Antrag entfernt')) },
     { titel: 'Erledigte Anträge älter als 6 Monate', text: 'Antrag löschen – das Mitglied bleibt in der Mitgliederliste.', anzahl: alteAntraege.length, knopf: 'Anträge löschen', aktion: () => alteAntraege.forEach((a) => entfernen('antraege', a.id, 'Alter Antrag gelöscht')) },
     { titel: 'Beantwortete Anfragen älter als 12 Monate', text: 'Kontaktanfragen werden nicht mehr benötigt.', anzahl: alteAnfragen.length, knopf: 'Anfragen löschen', aktion: () => alteAnfragen.forEach((a) => entfernen('anfragen', a.id, 'Alte Anfrage gelöscht')) },
     { titel: 'E-Mail-Verlauf älter als 12 Monate', text: 'Einträge im Postausgang inkl. Anhängen.', anzahl: altePost.length, knopf: 'Verlauf löschen', aktion: () => altePost.forEach((p) => entfernen('postausgang', p.id, 'Alter E-Mail-Verlauf gelöscht')) },
+    { titel: 'Nicht freigeschaltete Registrierungen (> 90 Tage)', text: 'Profil löschen; das Anmeldekonto in der Firebase-Konsole (Authentication) entfernen.', anzahl: offeneRegistrierungen.length, knopf: 'Registrierungen löschen', aktion: () => offeneRegistrierungen.forEach((b) => entfernen('benutzer', b.id, 'Alte Registrierung gelöscht')) },
+    { titel: 'Fanshop-Bestellungen nach Ablauf der Aufbewahrung', text: 'Stornierte nach 1 Jahr, ohne Rechnung nach 6 Jahren (Handelsbriefe), alle nach 10 Jahren.', anzahl: alteBestellungen.length, knopf: 'Bestellungen löschen', aktion: () => alteBestellungen.forEach((b) => entfernen('bestellungen', b.id, `Bestellung gelöscht (Löschkonzept): ${b.nummer}`)) },
   ];
   return (
     <div className="space-y-4">
@@ -132,21 +149,112 @@ function Auskunft({ d }: SeitenProps) {
   );
 }
 
-function Sicherheit({ d }: SeitenProps) {
+// ---------------- Löschung einer Person (Art. 17 DSGVO) ----------------
+function Loeschung({ d }: SeitenProps) {
+  const [suche, setSuche] = useState('');
+  const [bestaetigt, setBestaetigt] = useState(false);
+  const s = suche.trim().toLowerCase();
+  const gueltig = s.length >= 4;
+  const passt = (name?: string, mail?: string) => gueltig && ((!!mail && mail.toLowerCase() === s) || (!!name && name.toLowerCase() === s));
+  const name = (a: { vorname: string; nachname: string }) => `${a.vorname} ${a.nachname}`;
+  const funde = {
+    mitglieder: d.mitglieder.filter((m) => passt(name(m), m.email)),
+    benutzer: d.benutzer.filter((b) => passt(name(b), b.email)),
+    antraege: d.antraege.filter((a) => passt(name(a), a.email)),
+    anfragen: d.anfragen.filter((a) => passt(a.name, a.email)),
+    gaestebuch: d.gaestebuch.filter((g) => passt(g.name)),
+    spieler: d.spieler.filter((p) => passt(name(p))),
+    postausgang: d.postausgang.filter((p) => p.an.length === 1 && passt(p.an[0].name, p.an[0].email)),
+  };
+  // Aufbewahrungspflichtig (§ 147 AO, § 257 HGB): bleiben erhalten
+  const behalten = { rechnungen: d.finanzbelege.filter((b) => passt(b.empfaenger.name, b.empfaenger.email)), bestellungen: d.bestellungen.filter((b) => passt(b.kunde.name, b.kunde.email)) };
+  const anzahl = Object.values(funde).reduce((n, l) => n + l.length, 0);
+  const loeschen = () => {
+    const kuerzel = s.includes('@') ? `${s.slice(0, 2)}…@${s.split('@')[1]}` : s.split(' ').map((t) => t[0]?.toUpperCase()).join('.');
+    (Object.entries(funde) as [keyof typeof funde, { id: string }[]][]).forEach(([sammlung, liste]) => liste.forEach((e) => entfernen(sammlung, e.id)));
+    // Kein Name im Protokoll – nur Kürzel und Anzahl (Nachweis der Löschung ohne neue Personendaten)
+    hinzufuegen('mitteilungen', { id: neueId('mt'), titel: 'DSGVO-Löschung durchgeführt', text: `Löschung nach Art. 17 DSGVO für „${kuerzel}“: ${anzahl} Datensätze entfernt. ${behalten.rechnungen.length + behalten.bestellungen.length} steuerlich aufbewahrungspflichtige Belege bleiben bis Fristende gesperrt erhalten.`, datum: jetztIso(), autor: 'Datenschutz', an: 'vorstand', wichtig: false, gelesenVon: [] }, `DSGVO-Löschung (${kuerzel}): ${anzahl} Datensätze`);
+    setSuche(''); setBestaetigt(false);
+    hinweis(`${anzahl} Datensätze gelöscht`);
+  };
+  const zeilen: [string, number][] = [['Mitgliederliste', funde.mitglieder.length], ['Benutzerkonto (Profil)', funde.benutzer.length], ['Mitgliedsanträge', funde.antraege.length], ['Kontaktanfragen', funde.anfragen.length], ['Gästebuch', funde.gaestebuch.length], ['Spielerlisten', funde.spieler.length], ['E-Mail-Verlauf', funde.postausgang.length]];
+  return (
+    <Karte titel={<span className="flex items-center gap-2"><UserX className="h-4 w-4" />Recht auf Löschung (Art. 17 DSGVO)</span>}>
+      <p className="mb-4 text-sm text-slate-600">E-Mail-Adresse oder vollständigen Namen (Vor- und Nachname) eingeben. Gelöscht wird alles, was nicht aus gesetzlichen Gründen aufbewahrt werden muss. Rechnungen, Spendenbescheinigungen und Bestellungen bleiben bis Fristende erhalten (§ 147 AO).</p>
+      <Eingabe value={suche} onChange={(e) => { setSuche(e.target.value); setBestaetigt(false); }} placeholder="name@beispiel.de oder Max Mustermann" className="!max-w-md" />
+      {gueltig && (
+        <div className="mt-5 space-y-4">
+          <ul className="grid gap-2 sm:grid-cols-2">{zeilen.map(([t, n]) => <li key={t} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span>{t}</span><Marke ton={n ? 'rot' : 'grau'}>{n}</Marke></li>)}</ul>
+          {(behalten.rechnungen.length > 0 || behalten.bestellungen.length > 0) && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Aufbewahrungspflichtig, bleiben erhalten: {behalten.rechnungen.length} Rechnung(en)/Bescheinigung(en), {behalten.bestellungen.length} Bestellung(en). Diese werden durch das Löschkonzept nach Fristende entfernt.</p>}
+          {funde.benutzer.length > 0 && <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Nach dem Löschen des Profils zusätzlich das Anmeldekonto in der Firebase-Konsole unter Authentication → Nutzer entfernen.</p>}
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={bestaetigt} onChange={(e) => setBestaetigt(e.target.checked)} />Die Identität der antragstellenden Person ist geprüft; die Daten werden endgültig gelöscht.</label>
+          <Knopf art="gefahr" disabled={!anzahl || !bestaetigt} onClick={loeschen}><Trash2 className="h-4 w-4" />{anzahl} Datensätze endgültig löschen</Knopf>
+        </div>
+      )}
+    </Karte>
+  );
+}
+
+// ---------------- Auftragsverarbeitung & Dienstleister ----------------
+const DIENSTLEISTER: { name: string; zweck: string; rolle: string; avv: string; ort: string }[] = [
+  { name: 'Google Firebase (Google Ireland Ltd.)', zweck: 'Datenbank, Anmeldung, Hosting, Dateien, App Check', rolle: 'Auftragsverarbeiter (Art. 28)', avv: 'Firebase-Konsole → Projekteinstellungen → Datenschutz → „Data Processing and Security Terms“ akzeptieren', ort: 'EU (eur3), Datenübermittlung USA nach DPF' },
+  { name: 'GitHub (GitHub Inc.)', zweck: 'Auslieferung der Webseite (Pages), E-Mail- und Sicherungs-Job', rolle: 'Auftragsverarbeiter', avv: 'GitHub Data Protection Agreement (gilt mit den GitHub-Nutzungsbedingungen)', ort: 'USA, DPF-zertifiziert' },
+  { name: 'E-Mail-Anbieter des Vereinspostfachs', zweck: 'Versand von Rundschreiben und Bestellbestätigungen', rolle: 'Auftragsverarbeiter', avv: 'AVV im Kundenkonto des Anbieters abschließen (z. B. IONOS, Strato, Google Workspace)', ort: 'je nach Anbieter' },
+  { name: 'Domain-/DNS-Anbieter (bsg-medizin-dessau.de)', zweck: 'Domain, DNS, ggf. Postfächer', rolle: 'Auftragsverarbeiter, falls Postfächer', avv: 'AVV im Kundenkonto des Registrars', ort: 'je nach Anbieter' },
+  { name: 'PayPal (Europe) S.à r.l. et Cie, S.C.A.', zweck: 'Zahlungsabwicklung Fanshop', rolle: 'eigener Verantwortlicher', avv: 'kein AVV nötig – Hinweis in der Datenschutzerklärung (§ 11)', ort: 'Luxemburg' },
+  { name: 'Stripe Payments Europe Ltd.', zweck: 'Kartenzahlung Fanshop', rolle: 'eigener Verantwortlicher', avv: 'kein AVV nötig – Hinweis in der Datenschutzerklärung (§ 11)', ort: 'Irland' },
+];
+
+function Auftragsverarbeitung() {
+  return (
+    <Karte titel={<span className="flex items-center gap-2"><FileText className="h-4 w-4" />Dienstleister und Auftragsverarbeitungsverträge (Art. 28 DSGVO)</span>}
+      aktionen={<Knopf klein onClick={() => excelHerunterladen('dienstleister-avv', [{ name: 'Dienstleister', zeilen: [['Dienstleister', 'Zweck', 'Rolle', 'Vertrag / Nachweis', 'Ort'], ...DIENSTLEISTER.map((x) => [x.name, x.zweck, x.rolle, x.avv, x.ort])] }])}><Download className="h-4 w-4" />Excel</Knopf>}>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-left text-xs uppercase text-slate-400"><tr><th className="py-2 pr-3">Dienstleister</th><th className="pr-3">Zweck</th><th className="pr-3">Rolle</th><th>Vertrag / Nachweis</th></tr></thead>
+          <tbody>{DIENSTLEISTER.map((x) => <tr key={x.name} className="border-t border-slate-100 align-top"><td className="py-2.5 pr-3 font-semibold">{x.name}<br /><span className="text-xs font-normal text-slate-500">{x.ort}</span></td><td className="pr-3">{x.zweck}</td><td className="pr-3">{x.rolle}</td><td className="text-slate-600">{x.avv}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p className="mt-4 text-xs text-slate-500">Abgeschlossene AVV als PDF unter Verwaltung → Dokumente (Sichtbarkeit „Vorstand“) ablegen.</p>
+    </Karte>
+  );
+}
+
+function Sicherheit({ d, b: ich }: SeitenProps) {
   const aktiv = d.benutzer.filter((b) => b.aktiv);
   const lange = aktiv.filter((b) => tageSeit(b.letzteAnmeldung) > 180);
+  const v = d.verein;
+  const pflichtUmschalten = async (an: boolean) => {
+    if (an) {
+      if (!CLOUD) return hinweis('Nur im Firebase-Betrieb verfügbar', 'fehler');
+      if (!zweiFaktorAktiv()) return hinweis('Zuerst unter „Mein Profil“ die eigene Zwei-Faktor-Anmeldung einrichten', 'fehler');
+      if (!(await mitZweitemFaktorAngemeldet())) return hinweis('Bitte ab- und mit Code wieder anmelden, dann einschalten', 'fehler');
+      if (!bestaetigen('Zwei-Faktor-Pflicht einschalten? Administratoren ohne eingerichtete Authenticator-App kommen danach nicht mehr an Mitglieder- und Finanzdaten.')) return;
+    }
+    vereinAendern({ zweiFaktorPflicht: an }, `Zwei-Faktor-Pflicht für Administratoren ${an ? 'eingeschaltet' : 'ausgeschaltet'}`);
+    hinweis(an ? 'Zwei-Faktor-Pflicht aktiv' : 'Zwei-Faktor-Pflicht aus');
+  };
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Karte titel="Schutzmaßnahmen im Portal">
         <ul className="space-y-2 text-sm">{[
-          'Verschlüsselte Übertragung (HTTPS), Passwörter nur als Hash (Firebase Authentication)',
+          'Verschlüsselte Übertragung (HTTPS, HSTS), Passwörter nur als Hash (Firebase Authentication)',
+          'Passwortrichtlinie: mind. 10 Zeichen (Admin/Vorstand 12) mit Groß-, Kleinbuchstaben und Zahl',
+          'Zwei-Faktor-Anmeldung mit Authenticator-App; für Administratoren als Pflicht einschaltbar (serverseitig erzwungen)',
           'Rollen- und Rechtekonzept – serverseitig durch Firestore-Sicherheitsregeln erzwungen',
           'Trainer sehen und bearbeiten nur ihre eigenen Mannschaften',
           'Automatische Abmeldung nach 30 Minuten ohne Aktivität',
           'Sicherheitsrichtlinie (CSP): nur eigene Skripte und Firebase-Verbindungen erlaubt',
-          'Formulare mit Spamschutz; Gästebuch nur nach Freigabe',
-          'Protokoll aller Änderungen; Sicherung als Download',
+          `Firebase App Check (reCAPTCHA) gegen Bots: ${APPCHECK_SCHLUESSEL ? 'aktiv' : 'vorbereitet – Websiteschlüssel fehlt (README)'}`,
+          'Formulare mit Spamschutz; Gästebuch nur nach Freigabe; Registrierungen nur nach Freischaltung',
+          'Tägliche verschlüsselte Datenbanksicherung (GitHub-Job, 30 Tage) + Sicherung als Download',
+          'Protokoll aller Änderungen',
         ].map((t) => <li key={t} className="flex gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />{t}</li>)}</ul>
+      </Karte>
+      <Karte titel={<span className="flex items-center gap-2"><KeyRound className="h-4 w-4" />Zwei-Faktor-Pflicht</span>}>
+        <Schalter an={!!v.zweiFaktorPflicht} onChange={pflichtUmschalten} label="Administratoren müssen sich mit Authenticator-App anmelden" beschreibung="Wird in den Firestore-Sicherheitsregeln erzwungen. Voraussetzung: Identity Platform mit TOTP ist in Firebase eingeschaltet (README)." />
+        {ich.rolle !== 'admin' && <p className="mt-3 text-xs text-slate-500">Nur Administratoren können die Pflicht ändern.</p>}
+        <div className="mt-4"><ZweiFaktorKarte verein={v} /></div>
       </Karte>
       <Karte titel="Konten prüfen">
         <p className="text-sm"><b>{aktiv.length}</b> aktive Zugänge, davon <b>{aktiv.filter((b) => b.rolle === 'admin').length}</b> Administrator(en).</p>
