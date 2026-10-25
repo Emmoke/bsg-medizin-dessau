@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* Vereinsfarben kommen aus den Vereinsdaten (Admin → Verein → Farben) und werden zur Laufzeit gesetzt */
+:root { --primaer: #0a4d8c; --akzent: #f5b301; --primaer-dunkel: color-mix(in oklab, var(--primaer) 55%, #020617); }
+
+@theme inline {
+  --color-primaer: var(--primaer);
+  --color-akzent: var(--akzent);
+  --color-primaer-dunkel: var(--primaer-dunkel);
+  --font-sans: Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply bg-slate-50 font-sans text-slate-900 antialiased; }
+  ::selection { background: color-mix(in oklab, var(--akzent) 45%, transparent); }
+}
+
+@media print { .kein-druck { display: none !important; } }
+
+/* Bewegung nur, wenn das System sie nicht reduziert haben möchte */
+@media (prefers-reduced-motion: no-preference) {
+  .ein { animation: ein .45s cubic-bezier(.2, .8, .2, 1) both; }
+  .ein-2 { animation: ein .55s .08s cubic-bezier(.2, .8, .2, 1) both; }
+  .ein-3 { animation: ein .65s .16s cubic-bezier(.2, .8, .2, 1) both; }
+  .laufband { animation: laufband 40s linear infinite; }
+  .laufband:hover { animation-play-state: paused; }
+  .schweben:hover { transform: translateY(-3px); }
+  .puls-punkt { animation: puls 2s ease-in-out infinite; }
+}
+.schweben { transition: transform .25s ease, box-shadow .25s ease; }
+.schweben:hover { box-shadow: 0 18px 40px -18px rgba(2, 6, 23, .35); }
+@keyframes ein { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes laufband { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes puls { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, .5); } 50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } }
+
+/* Heldbereich: weiche Flutlicht-Kegel über der Vereinsfarbe */
+.held {
+  --held-ebenen:
+    radial-gradient(900px 420px at 85% -10%, color-mix(in oklab, var(--akzent) 35%, transparent), transparent 60%),
+    radial-gradient(700px 380px at 0% 110%, color-mix(in oklab, var(--primaer) 80%, #fff), transparent 60%),
+    linear-gradient(135deg, var(--primaer) 0%, var(--primaer-dunkel) 100%);
+  background: var(--held-ebenen);
+}
+/* Rasenstreifen als oberste Ebene – die Heldfarben bleiben darunter erhalten */
+.held.rasen-linien {
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .045) 0 80px, transparent 80px 160px), var(--held-ebenen);
+}
+.text-ausgleich { text-wrap: balance; }
+.zahlen { font-variant-numeric: tabular-nums; }
