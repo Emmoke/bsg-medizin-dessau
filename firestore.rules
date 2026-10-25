@@ -32,7 +32,7 @@ service cloud.firestore {
       allow read: if aktiv() || (angemeldet() && request.auth.uid == uid);
       // Ersteinrichtung: das erste Konto legt sich selbst als Admin an, solange die Datenbank leer ist
       allow create: if (angemeldet() && request.auth.uid == uid && !eingerichtet() && request.resource.data.rolle == 'admin'
-          && request.auth.token.email.lower() == 'emmoke@outlook.de')
+          && request.auth.token.email.lower() in ['emmoke@outlook.de', 'sewar.khalil@outlook.de'])
         || darf('benutzer.verwalten');
       allow update: if darf('benutzer.verwalten')
         || (aktiv() && request.auth.uid == uid && nurFelder(['vorname', 'nachname', 'telefon', 'letzteAnmeldung']));

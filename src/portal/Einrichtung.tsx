@@ -1,7 +1,7 @@
 // Ersteinrichtung im Firebase-Betrieb: erstes Admin-Konto anlegen und die Vereinsdaten (von bsg-medizin.de) hochladen.
 // Funktioniert nur, solange die Datenbank leer ist (siehe firestore.rules: "eingerichtet()").
 import { useState, useSyncExternalStore } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Link, navigiere } from '../router';
@@ -24,7 +24,11 @@ export function Einrichtung() {
     if (!w.vorname.trim() || !/^\S+@\S+\.\S+$/.test(w.email) || pwFehler || w.pw !== w.pw2) return setFehler('Bitte Name, gültige E-Mail und zweimal dasselbe Passwort (mind. 8 Zeichen, Buchstaben und Zahlen) angeben.');
     try {
       setSchritt('Admin-Konto wird angelegt …');
-      const k = await createUserWithEmailAndPassword(auth, w.email.trim(), w.pw);
+      // Gibt es das Login-Konto schon (z. B. nach einem abgebrochenen Versuch), wird es einfach angemeldet
+      const k = await createUserWithEmailAndPassword(auth, w.email.trim(), w.pw).catch((e) => {
+        if ((e as { code?: string }).code === 'auth/email-already-in-use') return signInWithEmailAndPassword(auth, w.email.trim(), w.pw);
+        throw e;
+      });
       const admin: Benutzer = { id: k.user.uid, vorname: w.vorname.trim(), nachname: w.nachname.trim(), email: w.email.trim().toLowerCase(), rolle: 'admin', mannschaftIds: [], passwortHash: '', aktiv: true };
       await setDoc(doc(db, 'benutzer', admin.id), admin);
 
