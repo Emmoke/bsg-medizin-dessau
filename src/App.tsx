@@ -62,7 +62,7 @@ export function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', farbePrimaer);
   }, [farbePrimaer, farbeAkzent]);
   const portal = /^\/(intern|trainer|admin)(\/|$)/.test(pfad);
-  useEffect(() => { if (!portal) aufrufZaehlen(); }, [pfad, portal]);
+  useEffect(() => { if (!portal) aufrufZaehlen(pfad); }, [pfad, portal]);
   useEffect(() => { weichesScrollen(); }, []);
   useEffect(() => { nachOben(); }, [pfad]);
   useSeitenBewegung(pfad);

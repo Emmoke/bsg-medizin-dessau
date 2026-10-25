@@ -6,13 +6,13 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { cloudUebernehmen, lesen, setzeCloudHaken } from './speicher';
-import { hatRecht, type Recht } from './rechte';
+import { cloudUebernehmen, lesen, setzeCloudHaken, vereinAendern } from './speicher';
+import { hatRecht, RECHTE_VERSION, rechteErgaenzen, type Recht } from './rechte';
 import { sha256 } from './sha256';
 import type { Benutzer, Datenbestand, Mitglied, Sammlung, Verein } from './typen';
 
 export const SAMMLUNGEN: Sammlung[] = ['mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente',
-  'gaestebuch', 'benutzer', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen', 'protokoll'];
+  'gaestebuch', 'benutzer', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen', 'protokoll', 'buchungen', 'finanzbelege', 'postausgang'];
 
 /** Filter je Sammlung: null = nicht lesbar, [] = alles, sonst Bedingung [Feld, Operator, Wert] */
 type Bedingung = null | [] | [string, '==' | 'in', unknown];
@@ -35,6 +35,8 @@ function filter(s: Sammlung, b: Benutzer | null, v: Verein): Bedingung {
     case 'mitglieder': return recht('mitglieder.verwalten') ? [] : null;
     case 'antraege': case 'anfragen': return recht('formulare.verwalten') ? [] : null;
     case 'protokoll': return recht('statistik.sehen') ? [] : null;
+    case 'buchungen': case 'finanzbelege': return recht('finanzen.verwalten') ? [] : null;
+    case 'postausgang': return recht('email.senden') || recht('finanzen.verwalten') ? [] : null;
     default: return [];
   }
 }
@@ -165,16 +167,30 @@ export async function allesHochladen(d: Datenbestand) {
 export function cloudStarten() {
   setzeCloudHaken({
     schreiben: differenzSchreiben,
-    aufruf: (tag) => { setDoc(doc(db, 'aufrufe', tag), { n: increment(1) }, { merge: true }).catch(() => { /* Zählen ist nicht wichtig */ }); },
+    aufruf: (tag, pfad) => {
+      // Anonym und ohne Cookies: Seite, Gerätetyp und – einmal je Besuch – die Herkunft zählen
+      const neuerBesuch = !sessionStorage.getItem('vereinsportal:besuch');
+      sessionStorage.setItem('vereinsportal:besuch', '1');
+      const geraet = innerWidth < 640 ? 'mobil' : innerWidth < 1024 ? 'tablet' : 'desktop';
+      const ref = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, '') : '';
+      const quelle = !ref || ref === location.hostname ? 'direkt' : /google|bing|duckduckgo|ecosia/.test(ref) ? 'suchmaschine' : /facebook|instagram|whatsapp|t\.co|tiktok|linkedin/.test(ref) ? 'social media' : 'andere webseite';
+      const seite = (pfad.split('/').slice(0, 3).join('/') || '/').replace(/[.~*\/\[\]]/g, '|');
+      setDoc(doc(db, 'aufrufe', tag), { n: increment(1), seiten: { [seite]: increment(1) }, geraete: { [geraet]: increment(1) }, ...(neuerBesuch ? { besuche: increment(1), quellen: { [quelle]: increment(1) } } : {}) }, { merge: true }).catch(() => { /* Zählen ist nicht wichtig */ });
+    },
   });
   onSnapshot(doc(db, 'meta', 'verein'), (d) => {
     eingerichtet = d.exists();
-    if (d.exists()) cloudUebernehmen({ verein: { ...lesen().verein, ...(d.data() as Verein) } });
+    if (d.exists()) {
+      const v = d.data() as Verein;
+      cloudUebernehmen({ verein: { ...lesen().verein, ...v, rechte: rechteErgaenzen({ ...lesen().verein.rechte, ...v.rechte }, v.rechteVersion ?? 1) } });
+      // Einmalig: neue Rechte dauerhaft speichern (nur ein Admin darf das)
+      if ((v.rechteVersion ?? 1) < RECHTE_VERSION && ich()?.rolle === 'admin') vereinAendern({ rechteVersion: RECHTE_VERSION }, 'Neue Rechte ergänzt');
+    }
     abosAktualisieren();
     statusMelden();
   }, () => { eingerichtet = false; statusMelden(); });
   onSnapshot(doc(db, 'meta', 'geburtstage'), (d) => cloudUebernehmen({ geburtstagsliste: (d.data()?.liste ?? []) as Datenbestand['geburtstagsliste'], mitgliederAnzahl: d.data()?.anzahl as number | undefined }), () => { /* optional */ });
-  onSnapshot(collection(db, 'aufrufe'), (snap) => cloudUebernehmen({ aufrufe: Object.fromEntries(snap.docs.map((d) => [d.id, d.data().n as number])) }), () => { /* optional */ });
+  onSnapshot(collection(db, 'aufrufe'), (snap) => cloudUebernehmen({ aufrufe: Object.fromEntries(snap.docs.map((d) => [d.id, d.data().n as number])), aufrufDetails: Object.fromEntries(snap.docs.map((d) => [d.id, { besuche: d.data().besuche, seiten: d.data().seiten, geraete: d.data().geraete, quellen: d.data().quellen }])) }), () => { /* optional */ });
   onAuthStateChanged(auth, (u) => {
     uid = u?.uid ?? null;
     abosAktualisieren();

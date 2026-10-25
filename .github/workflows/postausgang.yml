@@ -1,0 +1,46 @@
+name: Postausgang verschicken (E-Mails aus dem Vereinsportal)
+
+# Alle 10 Minuten: E-Mails aus dem Postausgang (Firestore) über das Vereinspostfach verschicken.
+# Benötigt die Repository-Secrets FIREBASE_DIENSTKONTO, VEREIN_SMTP_ADRESSE und VEREIN_SMTP_PASSWORT.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: postausgang
+  cancel-in-progress: false
+
+jobs:
+  senden:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_DIENSTKONTO: ${{ secrets.FIREBASE_DIENSTKONTO }}
+      VEREIN_SMTP_ADRESSE: ${{ secrets.VEREIN_SMTP_ADRESSE }}
+      VEREIN_SMTP_PASSWORT: ${{ secrets.VEREIN_SMTP_PASSWORT }}
+      VEREIN_SMTP_SERVER: ${{ secrets.VEREIN_SMTP_SERVER }}
+    steps:
+      - name: Prüfen, ob eingerichtet
+        id: pruefen
+        run: |
+          if [ -z "$FIREBASE_DIENSTKONTO" ] || [ -z "$VEREIN_SMTP_PASSWORT" ]; then
+            echo "::notice::Automatischer E-Mail-Versand ist noch nicht eingerichtet – Job übersprungen."
+            echo "aktiv=nein" >> "$GITHUB_OUTPUT"
+          else
+            echo "aktiv=ja" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.pruefen.outputs.aktiv == 'ja'
+      - uses: actions/setup-node@v4
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        with:
+          node-version: 22
+      - name: Abhängigkeiten
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        run: npm install --no-save --prefix /tmp/versand firebase-admin@13 nodemailer@7 && cp werkzeuge/postausgang.mjs /tmp/versand/
+      - name: Senden
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        run: node /tmp/versand/postausgang.mjs

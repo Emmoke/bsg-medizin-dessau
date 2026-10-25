@@ -46,14 +46,14 @@ if (e.FUSSBALL !== '1') {
 }
 for (const m of d.mannschaften) { m.trainerIds = []; m.betreuer = m.betreuer.filter((b) => b.name !== 'Tom Trainer'); }
 if (e.TESTDATEN !== '1') {
-  d.spieler = []; d.spiele = []; d.tabellen = []; d.mitglieder = []; d.trainings = []; d.antraege = []; d.anfragen = []; d.gaestebuch = [];
+  d.spieler = []; d.spiele = []; d.tabellen = []; d.mitglieder = []; d.trainings = []; d.antraege = []; d.anfragen = []; d.gaestebuch = []; d.buchungen = []; d.finanzbelege = []; d.postausgang = [];
   d.mitteilungen = d.mitteilungen.filter((m) => !m.titel.includes('Beispiel'));
   d.termine = d.termine.filter((t) => !t.titel.includes('Beispiel'));
   d.gegner = d.gegner.filter((g) => !g.name.includes('(Beispiel)'));
 }
 
 const SAMMLUNGEN = ['benutzer', 'mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente',
-  'gaestebuch', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen'] as const;
+  'gaestebuch', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen', 'buchungen', 'finanzbelege', 'postausgang'] as const;
 const dokumente: [string, object][] = [];
 for (const s of SAMMLUNGEN) for (const x of d[s] as { id: string }[]) dokumente.push([`${s}/${x.id}`, x]);
 await schreiben(dokumente);

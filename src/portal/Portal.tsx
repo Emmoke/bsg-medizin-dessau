@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Bell, CalendarDays, FileText, UserCircle, Users, ClipboardCheck, Trophy, Camera, Newspaper, Images, Handshake, Building2,
-  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard, Swords, Globe, BookOpen,
+  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard, Swords, Globe, BookOpen, Wallet, Mail, Megaphone, BarChart3, BadgeCheck, ShieldCheck,
 } from 'lucide-react';
 import { Link, navigiere, usePfad } from '../router';
 import { speicherFehler, useDaten } from '../daten/speicher';
@@ -18,6 +18,12 @@ import { MedienVerwaltung, NewsVerwaltung, SponsorenVerwaltung, TermineVerwaltun
 import { MannschaftenVerwaltung, MitgliederVerwaltung, SpieleVerwaltung, VereinVerwaltung } from './AdminVerein';
 import { BenutzerVerwaltung, Dashboard, FormulareVerwaltung, ProtokollAnsicht, RechteVerwaltung, Sicherung } from './AdminSystem';
 import { GaestebuchVerwaltung, GegnerVerwaltung, WebseiteVerwaltung } from './AdminWeb';
+import { Finanzen } from './Finanzen';
+import { EmailCenter } from './Email';
+import { Werbung } from './Werbung';
+import { Besucher } from './Besucher';
+import { Logo } from './Logo';
+import { Datenschutz } from './Datenschutz';
 
 export interface SeitenProps { d: Datenbestand; b: Benutzer }
 interface Eintrag { pfad: string; text: string; icon: typeof Bell; recht: Recht; seite: (p: SeitenProps) => React.ReactNode; zahl?: (d: Datenbestand, b: Benutzer) => number }
@@ -40,6 +46,12 @@ const BEREICHE: { titel: string; eintraege: Eintrag[] }[] = [
   ] },
   { titel: 'Verwaltung', eintraege: [
     { pfad: '/admin', text: 'Dashboard', icon: LayoutDashboard, recht: 'admin.zugang', seite: (p) => <Dashboard {...p} /> },
+    { pfad: '/admin/finanzen', text: 'Finanzen & Kasse', icon: Wallet, recht: 'finanzen.verwalten', seite: (p) => <Finanzen {...p} />, zahl: (d) => d.finanzbelege.filter((b) => b.typ === 'rechnung' && b.status === 'offen' && !!b.faellig && b.faellig < new Date().toISOString().slice(0, 10)).length },
+    { pfad: '/admin/email', text: 'E-Mail & Rundschreiben', icon: Mail, recht: 'email.senden', seite: (p) => <EmailCenter {...p} /> },
+    { pfad: '/admin/werbung', text: 'Werbung & Social Media', icon: Megaphone, recht: 'werbung.erstellen', seite: (p) => <Werbung {...p} /> },
+    { pfad: '/admin/besucher', text: 'Besucher', icon: BarChart3, recht: 'statistik.sehen', seite: (p) => <Besucher {...p} /> },
+    { pfad: '/admin/datenschutz', text: 'Datenschutz & Sicherheit', icon: ShieldCheck, recht: 'verein.verwalten', seite: (p) => <Datenschutz {...p} /> },
+    { pfad: '/admin/logo', text: 'Vereinslogo', icon: BadgeCheck, recht: 'verein.verwalten', seite: (p) => <Logo {...p} /> },
     { pfad: '/admin/news', text: 'News', icon: Newspaper, recht: 'news.verwalten', seite: (p) => <NewsVerwaltung {...p} /> },
     { pfad: '/admin/termine', text: 'Veranstaltungen', icon: CalendarDays, recht: 'termine.verwalten', seite: (p) => <TermineVerwaltung {...p} /> },
     { pfad: '/admin/medien', text: 'Galerie & Videos', icon: Images, recht: 'medien.verwalten', seite: (p) => <MedienVerwaltung {...p} /> },
@@ -74,6 +86,15 @@ export function Portal({ pfad }: { pfad: string }) {
   const [offen, setOffen] = useState(false);
   const aktuellerPfad = usePfad();
   useEffect(() => setOffen(false), [aktuellerPfad]);
+  // Sicherheit: nach 30 Minuten ohne Aktivität automatisch abmelden
+  useEffect(() => {
+    let zuletzt = Date.now();
+    const aktiv = () => { zuletzt = Date.now(); };
+    const ereignisse = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+    ereignisse.forEach((e) => window.addEventListener(e, aktiv, { passive: true }));
+    const t = setInterval(() => { if (Date.now() - zuletzt > 30 * 60_000) { abmelden(); navigiere('/login'); } }, 60_000);
+    return () => { clearInterval(t); ereignisse.forEach((e) => window.removeEventListener(e, aktiv)); };
+  }, []);
   const laedt = useAnmeldungLaedt();
   const ohneProfil = useKontoOhneProfil();
   useEffect(() => { if (!b && !laedt && !ohneProfil) navigiere('/login', true); }, [b, laedt, ohneProfil]);

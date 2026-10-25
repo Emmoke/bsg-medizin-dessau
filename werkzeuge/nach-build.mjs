@@ -1,6 +1,11 @@
 // Nach dem Bauen: 404.html = index.html, damit Direktlinks (z. B. /mannschaften/herren-1) auf GitHub Pages funktionieren.
 // Zusätzlich sitemap.xml und robots.txt erzeugen.
-import { copyFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+
+// Sicherheitsrichtlinie (CSP) nur in der fertigen Seite – im Entwicklungsserver würde sie Vites Hilfsskripte blockieren
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' data: blob: https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'";
+const html = readFileSync('dist/index.html', 'utf8').replace('<meta charset="UTF-8" />', `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`);
+writeFileSync('dist/index.html', html);
 
 copyFileSync('dist/index.html', 'dist/404.html');
 

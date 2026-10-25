@@ -46,6 +46,43 @@ export interface Verein {
   gaestebuchAktiv?: boolean;
   /** Sportarten, die auf der öffentlichen Webseite ausgeblendet sind */
   ausgeblendeteSportarten?: string[];
+  /** Finanzen: Bankverbindung, Steuerangaben, Nummernkreise, Texte */
+  finanzen?: Finanzeinstellungen;
+  emailVorlagen?: EmailVorlage[];
+  /** Versand: über das eigene E-Mail-Programm oder automatisch über das Vereinspostfach (GitHub-Job, siehe README) */
+  emailEinstellungen?: { versand: 'programm' | 'automatisch'; absenderName: string; signatur: string };
+  rechteVersion?: number;
+}
+
+export interface Finanzeinstellungen {
+  kontoinhaber: string; iban: string; bic?: string; bank?: string;
+  steuernummer?: string; finanzamt?: string;
+  /** Freistellungsbescheid bzw. Feststellung nach § 60a AO – für Spendenbescheinigungen */
+  bescheidArt: 'freistellung' | 'feststellung'; bescheidDatum?: string; bescheidZeitraum?: string;
+  zweck: string;
+  steuerhinweis?: string;
+  zahlungsziel: number;
+  kassenwart?: string;
+  anfangsbestandKasse: number; anfangsbestandBank: number;
+}
+
+export type Konto = 'kasse' | 'bank';
+/** Steuerliche Bereiche eines gemeinnützigen Vereins */
+export type Sphaere = 'ideell' | 'vermoegen' | 'zweckbetrieb' | 'wirtschaftlich';
+export interface Buchung { id: string; datum: string; art: 'einnahme' | 'ausgabe'; betrag: number; kategorie: string; sphaere: Sphaere; konto: Konto; text: string; belegNr?: string; belegBild?: string; finanzbelegId?: string }
+export interface Position { text: string; menge: number; preis: number }
+export interface Empfaenger { name: string; zusatz?: string; strasse?: string; plzOrt?: string; email?: string }
+export interface Finanzbeleg {
+  id: string; typ: 'rechnung' | 'angebot' | 'spende'; nummer: string; datum: string; faellig?: string;
+  empfaenger: Empfaenger; mitgliedId?: string; sponsorId?: string; positionen: Position[]; einleitung?: string; hinweis?: string;
+  status: 'entwurf' | 'offen' | 'bezahlt' | 'storniert' | 'angenommen' | 'abgelehnt'; bezahltAm?: string; mahnstufe?: number;
+  /** Spendenbescheinigung */
+  spendenart?: 'geld' | 'sach'; verzicht?: boolean; sachBeschreibung?: string;
+}
+export interface EmailVorlage { id: string; name: string; betreff: string; text: string }
+export interface Postausgang {
+  id: string; datum: string; autor: string; art: string; an: { name?: string; email: string }[]; betreff: string; text: string;
+  status: 'warteschlange' | 'gesendet' | 'fehler' | 'programm'; gesendetAm?: string; fehler?: string; anhang?: { name: string; daten: string };
 }
 
 export interface Vereinsheim { name: string; text: string; oeffnungszeiten: string; telefon?: string; angebot?: string; bild?: string }
@@ -234,11 +271,16 @@ export interface Datenbestand {
   anfragen: Anfrage[];
   gaestebuch: Gaestebucheintrag[];
   gegner: Gegnerverein[];
+  buchungen: Buchung[];
+  finanzbelege: Finanzbeleg[];
+  postausgang: Postausgang[];
   protokoll: Protokolleintrag[];
   /** Öffentliche Geburtstagsliste (nur Mitglieder mit Einwilligung, Nachname abgekürzt) – für Gäste ohne Zugriff auf die Mitgliederliste */
   geburtstagsliste?: { vorname: string; nachname: string; datum: string; jahr: number }[];
   /** Anzahl aktiver Mitglieder (öffentlich, ohne Namen) */
   mitgliederAnzahl?: number;
+  /** Besucherdetails je Tag (anonym): Besuche, Seiten, Geräte, Herkunft */
+  aufrufDetails?: Record<string, { besuche?: number; seiten?: Record<string, number>; geraete?: Record<string, number>; quellen?: Record<string, number> }>;
   /** Seitenaufrufe je Tag: { "2026-10-25": 12 } */
   aufrufe: Record<string, number>;
 }

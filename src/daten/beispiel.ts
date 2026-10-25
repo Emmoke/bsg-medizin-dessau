@@ -4,6 +4,7 @@
 // Badminton-Freundschaftsspiele, Trainingseinheiten, Anträge und Anfragen. Diese im Admin ersetzen bzw. löschen.
 import type { Album, Benutzer, Datenbestand, Gegnerverein, Mannschaft, Mitglied, News, Spiel, Spielereignis, Spieler, Tabellenzeile, Training, Verein } from './typen';
 import { bilanz, sortiereTabelle } from './auswertung';
+import { datenschutzMuster } from './rechtstexte';
 import { STANDARD_RECHTE } from './rechte';
 import { passwortHash } from './sha256';
 
@@ -98,7 +99,21 @@ export function beispielDaten(): Datenbestand {
     antragAktiv: true,
     kontaktAktiv: true,
     gaestebuchAktiv: true,
-    links: [
+    finanzen: {
+      kontoinhaber: 'BSG Medizin Dessau e.V.', iban: '', bic: '', bank: '', steuernummer: '', finanzamt: 'Dessau-Roßlau',
+      bescheidArt: 'freistellung', bescheidDatum: '', bescheidZeitraum: '',
+      zweck: 'Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO)', steuerhinweis: '', zahlungsziel: 14, kassenwart: 'Huner Khalil',
+      anfangsbestandKasse: 0, anfangsbestandBank: 0,
+    },
+    rechteVersion: 2,
+    emailVorlagen: [
+      { id: 'ev1', name: 'Mitgliederinfo', betreff: 'Neuigkeiten aus der BSG Medizin', text: 'Hallo {vorname},\n\nhier die wichtigsten Neuigkeiten aus unserem Verein:\n\n- …\n- …\n\nBei Fragen erreichst du uns jederzeit per E-Mail.\n\nSportliche Grüße\n{absender}\n{verein}' },
+      { id: 'ev2', name: 'Einladung Mitgliederversammlung', betreff: 'Einladung zur Mitgliederversammlung', text: 'Hallo {vorname},\n\nhiermit laden wir dich herzlich zur ordentlichen Mitgliederversammlung ein.\n\nTermin: …\nOrt: …\n\nTagesordnung:\n1. Begrüßung\n2. Bericht des Vorstands\n3. Kassenbericht\n4. Entlastung des Vorstands\n5. Wahlen\n6. Verschiedenes\n\nAnträge bitte bis eine Woche vorher an den Vorstand.\n\nMit freundlichen Grüßen\n{absender}\n{verein}' },
+      { id: 'ev3', name: 'Erinnerung Mitgliedsbeitrag', betreff: 'Erinnerung: Mitgliedsbeitrag', text: 'Hallo {vorname},\n\nbei der Durchsicht unserer Unterlagen ist uns aufgefallen, dass dein Mitgliedsbeitrag noch offen ist. Vielleicht ist es einfach untergegangen – bitte überweise den Betrag in den nächsten Tagen.\n\nFalls du bereits bezahlt hast, betrachte diese Nachricht bitte als gegenstandslos.\n\nVielen Dank!\n{absender}\n{verein}' },
+      { id: 'ev4', name: 'Trainingsausfall', betreff: 'Training fällt aus', text: 'Hallo {vorname},\n\nleider fällt das Training am … aus. Grund: …\n\nDas nächste Training findet wie gewohnt statt.\n\nSportliche Grüße\n{absender}' },
+      { id: 'ev5', name: 'Geburtstagsgruß', betreff: 'Alles Gute zum Geburtstag!', text: 'Hallo {vorname},\n\ndie ganze BSG Medizin wünscht dir alles Gute zum Geburtstag, viel Gesundheit und weiterhin viel Freude beim Sport!\n\n{verein}' },
+      { id: 'ev6', name: 'Willkommen im Verein', betreff: 'Herzlich willkommen in der BSG Medizin!', text: 'Hallo {vorname},\n\nschön, dass du dabei bist! Deine Trainingszeiten findest du auf unserer Webseite. Für Fragen sind wir jederzeit per E-Mail erreichbar.\n\nSei mutig – mach mit!\n{absender}\n{verein}' },
+    ],    links: [
       { id: 'l1', titel: 'Bund Deutscher Sportschützen (BDS)', url: 'https://www.bdsnet.de', kategorie: 'Verbände', beschreibung: 'Unser Verband im Sportschießen' },
       { id: 'l2', titel: 'Landessportbund Sachsen-Anhalt', url: 'https://www.lsb-sachsen-anhalt.de', kategorie: 'Verbände' },
       { id: 'l3', titel: 'Stadt Dessau-Roßlau', url: 'https://www.dessau-rosslau.de', kategorie: 'Stadt & Partner' },
@@ -108,6 +123,8 @@ export function beispielDaten(): Datenbestand {
       { id: 'l7', titel: 'Feldenkrais-Verband Deutschland', url: 'https://www.feldenkrais.de', kategorie: 'Sportarten' },
     ],
   };
+
+  verein.datenschutz = datenschutzMuster(verein);
 
   // ---- Abteilungen / Gruppen (Angaben von bsg-medizin.de) ----
   const k = (name: string, amt: string) => ({ id: id('k'), name, amt });
@@ -352,7 +369,18 @@ export function beispielDaten(): Datenbestand {
     anfragen: [
       { id: 'q1', datum: zeitpunkt(-2, '17:40'), name: 'Beispiel-Anfrage', email: 'interessent@example.com', betreff: 'Schnupperstunde Zumba', nachricht: 'Hallo, kann ich am Dienstag einfach zum Zumba vorbeikommen? (Beispiel)', an: 'Zumba', status: 'neu' },
     ],
-    gaestebuch: [],
+    buchungen: [
+      { id: 'bu1', datum: zeitpunkt(-40).slice(0, 10), art: 'einnahme', betrag: 1320, kategorie: 'Mitgliedsbeiträge', sphaere: 'ideell', konto: 'bank', text: 'Beitragseinzug Quartal (Beispiel)' },
+      { id: 'bu2', datum: zeitpunkt(-35).slice(0, 10), art: 'ausgabe', betrag: 240, kategorie: 'Hallenmiete', sphaere: 'ideell', konto: 'bank', text: 'Hallennutzung Alexianer (Beispiel)', belegNr: 'E-2026-014' },
+      { id: 'bu3', datum: zeitpunkt(-20).slice(0, 10), art: 'ausgabe', betrag: 89.9, kategorie: 'Sportgeräte', sphaere: 'ideell', konto: 'kasse', text: 'Federbälle und Netz (Beispiel)', belegNr: 'K-2026-007' },
+      { id: 'bu4', datum: zeitpunkt(-12).slice(0, 10), art: 'einnahme', betrag: 250, kategorie: 'Spenden', sphaere: 'ideell', konto: 'bank', text: 'Spende Jugendarbeit (Beispiel)' },
+      { id: 'bu5', datum: zeitpunkt(-8).slice(0, 10), art: 'einnahme', betrag: 145.5, kategorie: 'Verkauf / Veranstaltung', sphaere: 'wirtschaftlich', konto: 'kasse', text: 'Kuchenverkauf Turnier (Beispiel)' },
+    ],
+    finanzbelege: [
+      { id: 'fb1', typ: 'rechnung', nummer: `R-${new Date().getFullYear()}-001`, datum: zeitpunkt(-25).slice(0, 10), faellig: zeitpunkt(-11).slice(0, 10), empfaenger: { name: 'Beispiel Mitglied', strasse: 'Musterweg 1', plzOrt: '06847 Dessau-Roßlau', email: 'mitglied@example.com' }, positionen: [{ text: 'Mitgliedsbeitrag Einzelmitglied Erwachsene, Jahr', menge: 1, preis: 132 }], status: 'offen' },
+      { id: 'fb2', typ: 'angebot', nummer: `A-${new Date().getFullYear()}-001`, datum: zeitpunkt(-5).slice(0, 10), faellig: zeitpunkt(25).slice(0, 10), empfaenger: { name: 'Beispiel GmbH', zusatz: 'z. Hd. Geschäftsführung', strasse: 'Industriestraße 3', plzOrt: '06847 Dessau-Roßlau' }, einleitung: 'vielen Dank für Ihr Interesse an einer Partnerschaft mit unserem Verein. Gern bieten wir Ihnen an:', positionen: [{ text: 'Logo auf der Vereinswebseite (Sponsorenseite und Laufband), 12 Monate', menge: 1, preis: 300 }, { text: 'Erwähnung in Social-Media-Beiträgen, 4 Beiträge', menge: 4, preis: 25 }], status: 'offen' },
+    ],
+    postausgang: [],    gaestebuch: [],
     protokoll: [],
     aufrufe: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [zeitpunkt(-29 + i).slice(0, 10), 20 + Math.floor(r() * 50) + (i % 7 === 2 ? 30 : 0)])),
   };

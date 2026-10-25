@@ -54,8 +54,8 @@ service cloud.firestore {
     match /aufrufe/{tag} {
       allow read: if true;
       // anonymer Seitenzähler: nur +1
-      allow create: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
-      allow update: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
+      allow create: if request.resource.data.keys().hasOnly(['n', 'seiten', 'geraete', 'quellen', 'besuche']) && request.resource.data.n == 1;
+      allow update: if request.resource.data.keys().hasOnly(['n', 'seiten', 'geraete', 'quellen', 'besuche']) && request.resource.data.n == resource.data.n + 1;
     }
     match /medien/{id} {
       allow read: if true;
@@ -103,5 +103,10 @@ service cloud.firestore {
     match /trainings/{id} { allow read: if aktiv(); allow write: if darf('mannschaften.verwalten') || trainerVon(team()); }
     match /mitglieder/{id} { allow read, write: if darf('mitglieder.verwalten'); }
     match /protokoll/{id} { allow create: if aktiv(); allow read, delete: if darf('statistik.sehen'); }
+
+    // ---- Finanzen und E-Mail ----
+    match /buchungen/{id} { allow read, write: if darf('finanzen.verwalten'); }
+    match /finanzbelege/{id} { allow read, write: if darf('finanzen.verwalten'); }
+    match /postausgang/{id} { allow read, write: if darf('email.senden') || darf('finanzen.verwalten'); }
   }
 }

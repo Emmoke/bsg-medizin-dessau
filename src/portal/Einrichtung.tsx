@@ -44,7 +44,7 @@ export function Einrichtung() {
       }
       for (const m of d.mannschaften) { m.trainerIds = []; if (m.betreuer.some((b) => b.name === 'Tom Trainer')) m.betreuer = m.betreuer.filter((b) => b.name !== 'Tom Trainer'); }
       if (!w.beispiele) {
-        d.spieler = []; d.spiele = []; d.tabellen = []; d.mitglieder = []; d.trainings = []; d.antraege = []; d.anfragen = []; d.gaestebuch = [];
+        d.spieler = []; d.spiele = []; d.tabellen = []; d.mitglieder = []; d.trainings = []; d.antraege = []; d.anfragen = []; d.gaestebuch = []; d.buchungen = []; d.finanzbelege = []; d.postausgang = [];
         d.mitteilungen = d.mitteilungen.filter((m) => !m.titel.includes('Beispiel'));
         d.termine = d.termine.filter((t) => !t.titel.includes('Beispiel'));
         d.gegner = d.gegner.filter((g) => !g.name.includes('(Beispiel)'));

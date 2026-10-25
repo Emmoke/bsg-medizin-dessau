@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 import type { Datenbestand, Eintrag, Sammlung, Verein } from './typen';
 import { beispielDaten } from './beispiel';
 import { CLOUD } from './modus';
+import { RECHTE_VERSION, rechteErgaenzen } from './rechte';
 
 // Im Firebase-Betrieb ist der Browserspeicher nur ein Zwischenspeicher für schnelles Öffnen
 const SCHLUESSEL = CLOUD ? 'vereinsportal:cloud-zwischenspeicher' : 'vereinsportal:v1';
@@ -38,7 +39,8 @@ export function vervollstaendigen(roh: Partial<Datenbestand>): Datenbestand {
   const basis = beispielDaten();
   const d = { ...basis, ...roh } as Datenbestand;
   d.verein = { ...basis.verein, ...(roh.verein ?? {}) };
-  d.verein.rechte = { ...basis.verein.rechte, ...(roh.verein?.rechte ?? {}) };
+  d.verein.rechte = rechteErgaenzen({ ...basis.verein.rechte, ...(roh.verein?.rechte ?? {}) }, roh.verein?.rechteVersion ?? 1);
+  d.verein.rechteVersion = RECHTE_VERSION;
   for (const k of Object.keys(basis) as (keyof Datenbestand)[]) {
     if (Array.isArray(basis[k]) && !Array.isArray(d[k])) (d as unknown as Record<string, unknown>)[k] = [];
   }
@@ -60,7 +62,7 @@ function speichern() {
 function melden() { hoerer.forEach((h) => h()); }
 
 // Firebase-Haken (von cloud.ts gesetzt): Änderungen auf den Server schreiben, Seitenaufrufe zählen
-let haken: { schreiben: (alt: Datenbestand, neu: Datenbestand) => void; aufruf: (tag: string) => void } | null = null;
+let haken: { schreiben: (alt: Datenbestand, neu: Datenbestand) => void; aufruf: (tag: string, pfad: string) => void } | null = null;
 export function setzeCloudHaken(h: typeof haken) { haken = h; }
 let angemeldet = false;
 
@@ -131,9 +133,9 @@ export function ersetzeAlles(d: Datenbestand, aktion = 'Datenbestand wiederherge
 export function aufBeispielZuruecksetzen() { if (!CLOUD) uebernehmen(beispielDaten(), 'Auf Beispieldaten zurückgesetzt'); }
 
 /** Seitenaufruf zählen (anonym, nur Anzahl je Tag – DSGVO-freundlich, keine Cookies) */
-export function aufrufZaehlen() {
+export function aufrufZaehlen(pfad = '/') {
   const tag = jetztIso().slice(0, 10);
-  if (CLOUD) { haken?.aufruf(tag); return; }
+  if (CLOUD) { haken?.aufruf(tag, pfad); return; }
   const aufrufe = { ...stand.aufrufe, [tag]: (stand.aufrufe[tag] ?? 0) + 1 };
   const tage = Object.keys(aufrufe).sort().slice(-120);
   stand = { ...stand, aufrufe: Object.fromEntries(tage.map((t) => [t, aufrufe[t]])) };
