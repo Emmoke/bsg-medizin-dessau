@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Download, FileText, Navigation } from 'lucide-react';
 import { Link } from '../router';
-import { useDaten } from '../daten/speicher';
+import { useDaten } from './daten';
 import { datumKurz } from '../daten/auswertung';
 import { useSeite } from '../seo';
 import { Fliesstext } from '../ui/bausteine';

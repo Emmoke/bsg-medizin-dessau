@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, CalendarPlus, MapPin, Clock, Users, Trophy } from 'lucide-react';
 import { Link } from '../router';
-import { useDaten } from '../daten/speicher';
+import { useDaten } from './daten';
 import { useBenutzer } from '../daten/anmeldung';
 import { alsDatum, alsIcs, datumKurz, datumLang, direktVergleich, ergebnisText, paarung, spielerName, spielerStatistik, uhrzeit, ausgang } from '../daten/auswertung';
 import type { Ereignistyp } from '../daten/typen';

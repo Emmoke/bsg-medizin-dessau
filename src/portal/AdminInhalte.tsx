@@ -8,6 +8,7 @@ import { bildVerkleinern, dateiLesen, initialenLogo } from '../daten/bilder';
 import type { Album, Dokument, News, Sichtbarkeit, Sponsor, Termin } from '../daten/typen';
 import { Auswahl, BildWahl, Dialog, Eingabe, Feld, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import type { SeitenProps } from './Portal';
+import { CLOUD } from '../daten/modus';
 
 function Loeschen({ onClick }: { onClick: () => void }) {
   return <Knopf art="gefahr" className="mr-auto" onClick={() => bestaetigen('Wirklich löschen? Das kann nicht rückgängig gemacht werden.') && onClick()}><Trash2 className="h-4 w-4" />Löschen</Knopf>;
@@ -223,7 +224,7 @@ export function DokumenteVerwaltung({ d }: SeitenProps) {
   const kategorien = [...new Set(d.dokumente.map((x) => x.kategorie))];
   const datei = async (f: File | undefined) => {
     if (!f || !offen) return;
-    if (f.size > 1.5e6) return hinweis('Datei zu groß (max. 1,5 MB im lokalen Modus). Größere Dateien bitte als Link hinterlegen.', 'fehler');
+    if (f.size > (CLOUD ? 7e5 : 1.5e6)) return hinweis(`Datei zu groß (max. ${CLOUD ? '700 KB' : '1,5 MB'}). Größere Dateien bitte als Link (z. B. Cloud-Ordner) hinterlegen.`, 'fehler');
     setOffen({ ...offen, inhalt: await dateiLesen(f), dateiname: f.name, groesse: f.size, titel: offen.titel || f.name.replace(/\.[^.]+$/, ''), url: undefined });
   };
   return (
@@ -252,7 +253,7 @@ export function DokumenteVerwaltung({ d }: SeitenProps) {
             <div className="sm:col-span-2">
               <span className="mb-1 block text-sm font-medium text-slate-700">Datei</span>
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 p-4 hover:border-primaer">
-                <Upload className="h-5 w-5 text-primaer" /><span className="text-sm">{offen.dateiname || 'PDF, Word, Bild … auswählen (max. 1,5 MB)'}</span>
+                <Upload className="h-5 w-5 text-primaer" /><span className="text-sm">{offen.dateiname || `PDF, Word, Bild … auswählen (max. ${CLOUD ? '700 KB' : '1,5 MB'})`}</span>
                 <input type="file" className="hidden" onChange={(e) => datei(e.target.files?.[0])} />
               </label>
             </div>

@@ -14,6 +14,8 @@ export default defineConfig({
         manualChunks: (id) => {
           if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
           if (/node_modules\/lucide-react\//.test(id)) return 'icons';
+          if (/node_modules\/@?firebase\//.test(id)) return 'firebase';
+          if (/node_modules\/(gsap|lenis)\//.test(id)) return 'bewegung';
         },
       },
     },

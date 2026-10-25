@@ -3,8 +3,10 @@
 import { useSyncExternalStore } from 'react';
 import type { Datenbestand, Eintrag, Sammlung, Verein } from './typen';
 import { beispielDaten } from './beispiel';
+import { CLOUD } from './modus';
 
-const SCHLUESSEL = 'vereinsportal:v1';
+// Im Firebase-Betrieb ist der Browserspeicher nur ein Zwischenspeicher für schnelles Öffnen
+const SCHLUESSEL = CLOUD ? 'vereinsportal:cloud-zwischenspeicher' : 'vereinsportal:v1';
 const SICHERUNGEN = 'vereinsportal:sicherungen';
 export const DATENVERSION = 1;
 
@@ -21,7 +23,14 @@ function laden(): Datenbestand {
       if (text) return vervollstaendigen(JSON.parse(text));
     } catch { /* beschädigt → Beispieldaten */ }
   }
-  return beispielDaten();
+  return CLOUD ? leererBestand() : beispielDaten();
+}
+
+/** Vereinsangaben ohne Inhalte – Startzustand im Firebase-Betrieb, bis die Daten vom Server da sind */
+export function leererBestand(): Datenbestand {
+  const b = beispielDaten();
+  for (const k of Object.keys(b) as (keyof Datenbestand)[]) if (Array.isArray(b[k])) (b as unknown as Record<string, unknown>)[k] = [];
+  return { ...b, aufrufe: {} };
 }
 
 /** Fehlende Sammlungen/Felder (z. B. nach einem Update) mit Standardwerten auffüllen */
@@ -50,18 +59,29 @@ function speichern() {
 
 function melden() { hoerer.forEach((h) => h()); }
 
+// Firebase-Haken (von cloud.ts gesetzt): Änderungen auf den Server schreiben, Seitenaufrufe zählen
+let haken: { schreiben: (alt: Datenbestand, neu: Datenbestand) => void; aufruf: (tag: string) => void } | null = null;
+export function setzeCloudHaken(h: typeof haken) { haken = h; }
+let angemeldet = false;
+
+/** Daten vom Server übernehmen (ohne zurückzuschreiben) */
+export function cloudUebernehmen(patch: Partial<Datenbestand>) { stand = { ...stand, ...patch }; speichern(); melden(); }
+
 function uebernehmen(neu: Datenbestand, aktion?: string) {
-  if (aktion) {
+  // Gäste (Formulare) schreiben kein Protokoll – das dürfen nur angemeldete Benutzer
+  if (aktion && (!CLOUD || angemeldet)) {
     const eintrag = { id: neueId('p'), zeit: jetztIso(), wer: akteur, aktion };
     neu = { ...neu, protokoll: [eintrag, ...neu.protokoll].slice(0, 300) };
   }
+  const alt = stand;
   stand = neu;
   speichern();
   melden();
+  haken?.schreiben(alt, neu);
 }
 
 // Andere Browser-Tabs übernehmen Änderungen sofort
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !CLOUD) {
   window.addEventListener('storage', (e) => {
     if (e.key === SCHLUESSEL && e.newValue) {
       try { stand = vervollstaendigen(JSON.parse(e.newValue)); melden(); } catch { /* ignorieren */ }
@@ -69,7 +89,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export function setzeAkteur(name: string) { akteur = name; }
+export function setzeAkteur(name: string, istAngemeldet = name !== 'Gast') { akteur = name; angemeldet = istAngemeldet; }
 export function lesen(): Datenbestand { return stand; }
 export function abonnieren(h: () => void) { hoerer.add(h); return () => { hoerer.delete(h); }; }
 export function useDaten(): Datenbestand { return useSyncExternalStore(abonnieren, lesen, lesen); }
@@ -108,11 +128,12 @@ export function entfernen<S extends Sammlung>(s: S, id: string, aktion?: string)
 }
 
 export function ersetzeAlles(d: Datenbestand, aktion = 'Datenbestand wiederhergestellt') { uebernehmen(vervollstaendigen(d), aktion); }
-export function aufBeispielZuruecksetzen() { uebernehmen(beispielDaten(), 'Auf Beispieldaten zurückgesetzt'); }
+export function aufBeispielZuruecksetzen() { if (!CLOUD) uebernehmen(beispielDaten(), 'Auf Beispieldaten zurückgesetzt'); }
 
 /** Seitenaufruf zählen (anonym, nur Anzahl je Tag – DSGVO-freundlich, keine Cookies) */
 export function aufrufZaehlen() {
   const tag = jetztIso().slice(0, 10);
+  if (CLOUD) { haken?.aufruf(tag); return; }
   const aufrufe = { ...stand.aufrufe, [tag]: (stand.aufrufe[tag] ?? 0) + 1 };
   const tage = Object.keys(aufrufe).sort().slice(-120);
   stand = { ...stand, aufrufe: Object.fromEntries(tage.map((t) => [t, aufrufe[t]])) };

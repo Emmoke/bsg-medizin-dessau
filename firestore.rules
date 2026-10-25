@@ -1,0 +1,107 @@
+rules_version = '2';
+// Sicherheitsregeln des Vereinsportals. Grundsatz: Öffentliches ist für alle lesbar, alles andere nur für angemeldete,
+// aktive Benutzer – und geschrieben wird nur mit dem passenden Recht der Rolle (Rechte-Matrix in meta/verein.rechte).
+// Trainer dürfen zusätzlich die Daten ihrer eigenen Mannschaften pflegen.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function angemeldet() { return request.auth != null; }
+    function profilPfad() { return /databases/$(db)/documents/benutzer/$(request.auth.uid); }
+    function ich() { return get(profilPfad()).data; }
+    function aktiv() { return angemeldet() && exists(profilPfad()) && ich().aktiv == true; }
+    function rolle() { return ich().rolle; }
+    function eingerichtet() { return exists(/databases/$(db)/documents/meta/verein); }
+    function darf(recht) {
+      return aktiv() && (rolle() == 'admin'
+        || (eingerichtet() && recht in get(/databases/$(db)/documents/meta/verein).data.rechte[rolle()]));
+    }
+    function trainerVon(mannschaftId) { return aktiv() && rolle() == 'trainer' && mannschaftId in ich().mannschaftIds; }
+    function nurFelder(felder) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(felder); }
+    function team() { return request.resource != null ? request.resource.data.mannschaftId : resource.data.mannschaftId; }
+
+    // ---- Vereinsdaten ----
+    match /meta/verein {
+      allow read: if true;
+      allow create: if aktiv() && rolle() == 'admin' && !eingerichtet();
+      allow update: if (darf('verein.verwalten') || darf('rechte.verwalten'))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['rechte']) || darf('rechte.verwalten'));
+    }
+    match /meta/geburtstage { allow read: if true; allow write: if darf('mitglieder.verwalten'); }
+
+    // ---- Benutzer ----
+    match /benutzer/{uid} {
+      allow read: if aktiv() || (angemeldet() && request.auth.uid == uid);
+      // Ersteinrichtung: das erste Konto legt sich selbst als Admin an, solange die Datenbank leer ist
+      allow create: if (angemeldet() && request.auth.uid == uid && !eingerichtet() && request.resource.data.rolle == 'admin'
+          && request.auth.token.email.lower() == 'emmoke@outlook.de')
+        || darf('benutzer.verwalten');
+      allow update: if darf('benutzer.verwalten')
+        || (aktiv() && request.auth.uid == uid && nurFelder(['vorname', 'nachname', 'telefon', 'letzteAnmeldung']));
+      allow delete: if darf('benutzer.verwalten') && request.auth.uid != uid;
+    }
+
+    // ---- Öffentlich lesbar ----
+    match /mannschaften/{id} { allow read: if true; allow write: if darf('mannschaften.verwalten'); }
+    match /spieler/{id} { allow read: if true; allow write: if darf('mannschaften.verwalten') || trainerVon(team()); }
+    match /spiele/{id} {
+      allow read: if true;
+      allow write: if darf('spiele.verwalten') || trainerVon(team());
+      // Mitglieder geben ihre Zu-/Absage ab
+      allow update: if aktiv() && nurFelder(['zusagen']);
+    }
+    match /tabellen/{id} { allow read: if true; allow write: if darf('spiele.verwalten') || trainerVon(team()); }
+    match /sponsoren/{id} { allow read: if true; allow write: if darf('sponsoren.verwalten'); }
+    match /gegner/{id} { allow read: if true; allow write: if darf('spiele.verwalten') || (aktiv() && rolle() == 'trainer'); }
+    match /aufrufe/{tag} {
+      allow read: if true;
+      // anonymer Seitenzähler: nur +1
+      allow create: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
+      allow update: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
+    }
+    match /medien/{id} {
+      allow read: if true;
+      allow create: if aktiv() && request.resource.data.d is string && request.resource.data.d.size() < 1048000;
+      allow delete: if darf('medien.verwalten');
+    }
+
+    // ---- Teilweise öffentlich ----
+    match /news/{id} {
+      allow read: if resource.data.status == 'veroeffentlicht' || aktiv();
+      allow write: if darf('news.verwalten') || trainerVon(team());
+    }
+    match /termine/{id} { allow read: if resource.data.oeffentlich == true || aktiv(); allow write: if darf('termine.verwalten'); }
+    match /alben/{id} { allow read: if resource.data.oeffentlich == true || aktiv(); allow write: if darf('medien.verwalten') || trainerVon(team()); }
+    match /dokumente/{id} {
+      allow read: if resource.data.sichtbar == 'oeffentlich'
+        || (aktiv() && (resource.data.sichtbar == 'mitglieder'
+          || (resource.data.sichtbar == 'trainer' && rolle() in ['trainer', 'vorstand', 'admin'])
+          || rolle() in ['vorstand', 'admin']));
+      allow write: if darf('dokumente.verwalten');
+    }
+    match /gaestebuch/{id} {
+      allow read: if resource.data.status == 'freigegeben' || darf('news.verwalten');
+      allow create: if request.resource.data.status == 'neu' && request.resource.data.text is string && request.resource.data.text.size() <= 1500
+        && request.resource.data.name.size() <= 60 && !request.resource.data.keys().hasAny(['antwort']);
+      allow update, delete: if darf('news.verwalten');
+    }
+
+    // ---- Formulare: Gäste dürfen einreichen, lesen nur die Verwaltung ----
+    match /antraege/{id} {
+      allow create: if request.resource.data.status == 'neu';
+      allow read, update, delete: if darf('formulare.verwalten');
+    }
+    match /anfragen/{id} {
+      allow create: if request.resource.data.status == 'neu' && request.resource.data.nachricht.size() <= 5000;
+      allow read, update, delete: if darf('formulare.verwalten');
+    }
+
+    // ---- Intern ----
+    match /mitteilungen/{id} {
+      allow read: if aktiv();
+      allow create, delete: if darf('mitteilungen.senden');
+      allow update: if darf('mitteilungen.senden') || (aktiv() && nurFelder(['gelesenVon']));
+    }
+    match /trainings/{id} { allow read: if aktiv(); allow write: if darf('mannschaften.verwalten') || trainerVon(team()); }
+    match /mitglieder/{id} { allow read, write: if darf('mitglieder.verwalten'); }
+    match /protokoll/{id} { allow create: if aktiv(); allow read, delete: if darf('statistik.sehen'); }
+  }
+}

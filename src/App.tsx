@@ -1,5 +1,5 @@
 // Einstieg: Vereinsfarben setzen, Seitenaufrufe zählen und je nach Pfad öffentliche Seite oder Portal zeigen.
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { passt, usePfad } from './router';
 import { aufrufZaehlen, useDaten } from './daten/speicher';
 import { Hinweise } from './ui/bausteine';
@@ -13,6 +13,10 @@ import { Kontakt, MitgliedWerden } from './oeffentlich/Formulare';
 import { Portal } from './portal/Portal';
 import { Archiv, Besucherstatistik, Gaestebuch, Links, Vereinsheim } from './oeffentlich/Extras';
 import { Fortschritt, nachOben, useSeitenBewegung, weichesScrollen } from './effekte/bewegung';
+import { Einrichtung } from './portal/Einrichtung';
+import { CLOUD } from './daten/modus';
+import { aufStatus, eingerichtet } from './daten/cloud';
+import { Link } from './router';
 
 const VEREIN: Record<string, VereinTeil> = {
   '/verein': 'ueber', '/verein/vorstand': 'vorstand', '/verein/geschichte': 'geschichte', '/verein/satzung': 'satzung',
@@ -62,11 +66,18 @@ export function App() {
   useEffect(() => { weichesScrollen(); }, []);
   useEffect(() => { nachOben(); }, [pfad]);
   useSeitenBewegung(pfad);
+  const istEingerichtet = useSyncExternalStore(aufStatus, () => eingerichtet, () => null);
+  if (pfad === '/einrichtung') return <><Einrichtung /><Hinweise /></>;
 
   return (
     <>
       {!portal && <Fortschritt />}
       {portal ? <Portal pfad={pfad} /> : <Layout><OeffentlicheSeite pfad={pfad} /></Layout>}
+      {CLOUD && istEingerichtet === false && (
+        <div className="fixed inset-x-0 bottom-0 z-[80] bg-slate-900 px-4 py-3 text-center text-sm text-white">
+          Das Vereinsportal ist noch nicht eingerichtet. <Link to="/einrichtung" className="font-bold text-akzent underline">Jetzt einrichten</Link>
+        </div>
+      )}
       <Hinweise />
     </>
   );

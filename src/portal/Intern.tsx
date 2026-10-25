@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Bell, CalendarDays, FileText, Trophy, Check, X, HelpCircle, Download, Send, AlertCircle } from 'lucide-react';
 import { Link } from '../router';
 import { aktualisieren, hinzufuegen, jetztIso, neueId } from '../daten/speicher';
-import { passwortPruefen, passwortSetzen } from '../daten/anmeldung';
+import { eigenesPasswortSetzen, passwortPruefen } from '../daten/anmeldung';
 import { hatRecht } from '../daten/rechte';
 import { alsDatum, datumKurz, naechsteSpiele, paarung, uhrzeit } from '../daten/auswertung';
 import type { Benutzer, Datenbestand, Sichtbarkeit, Zusage } from '../daten/typen';
@@ -185,7 +185,7 @@ export function Profil({ d, b }: SeitenProps) {
           <div className="space-y-4">
             <Feld label="Neues Passwort" fehler={pwFehler ?? undefined} hinweis="Mindestens 8 Zeichen mit Buchstaben und Zahlen"><Eingabe type="password" autoComplete="new-password" value={pw.neu} onChange={(e) => setPw({ ...pw, neu: e.target.value })} /></Feld>
             <Feld label="Wiederholen" fehler={pw.wiederholung && pw.wiederholung !== pw.neu ? 'Stimmt nicht überein' : undefined}><Eingabe type="password" autoComplete="new-password" value={pw.wiederholung} onChange={(e) => setPw({ ...pw, wiederholung: e.target.value })} /></Feld>
-            <Knopf art="primaer" disabled={!pw.neu || !!pwFehler || pw.neu !== pw.wiederholung} onClick={() => { passwortSetzen(b, pw.neu); setPw({ neu: '', wiederholung: '' }); hinweis('Passwort geändert'); }}>Passwort ändern</Knopf>
+            <Knopf art="primaer" disabled={!pw.neu || !!pwFehler || pw.neu !== pw.wiederholung} onClick={async () => { const f = await eigenesPasswortSetzen(b, pw.neu); if (f) return hinweis(f, 'fehler'); setPw({ neu: '', wiederholung: '' }); hinweis('Passwort geändert'); }}>Passwort ändern</Knopf>
           </div>
         </Karte>
         <Karte titel="Datenschutz">

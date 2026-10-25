@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CalendarPlus, ChevronLeft, ChevronRight, MapPin, Clock, X, PlayCircle, ExternalLink, LogIn, Search } from 'lucide-react';
 import { Link, navigiere } from '../router';
-import { useDaten } from '../daten/speicher';
-import { anmelden, useBenutzer } from '../daten/anmeldung';
+import { useDaten } from './daten';
+import { anmelden, passwortLinkSenden, useBenutzer } from '../daten/anmeldung';
+import { CLOUD } from '../daten/modus';
 import { alsDatum, alsIcs, datumKurz, datumLang, monatsName, tagIso, uhrzeit } from '../daten/auswertung';
 import type { Medium, Termin } from '../daten/typen';
 import { useSeite } from '../seo';
@@ -308,12 +309,20 @@ export function Login() {
   const [passwort, setPasswort] = useState('');
   const [fehler, setFehler] = useState('');
   useEffect(() => { if (benutzer) navigiere('/intern', true); }, [benutzer]);
-  const absenden = (e: React.FormEvent) => {
+  const [laeuft, setLaeuft] = useState(false);
+  const absenden = async (e: React.FormEvent) => {
     e.preventDefault();
-    const r = anmelden(email, passwort);
+    setLaeuft(true);
+    const r = await anmelden(email, passwort);
+    setLaeuft(false);
     if (!r.ok) setFehler(r.fehler);
   };
-  const demo = d.benutzer.some((b) => b.email.endsWith('@verein.de'));
+  const vergessen = async () => {
+    if (!/^\S+@\S+\.\S+$/.test(email)) return setFehler('Bitte zuerst die E-Mail-Adresse eintragen.');
+    const f = await passwortLinkSenden(email);
+    setFehler(f ?? 'Falls ein Konto existiert, wurde ein Link zum Zurücksetzen an diese E-Mail geschickt.');
+  };
+  const demo = !CLOUD && d.benutzer.some((b) => b.email.endsWith('@verein.de'));
   return (
     <div className="held rasen-linien flex min-h-[80vh] items-center justify-center px-4 py-12">
       <div className="ein w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
@@ -325,9 +334,10 @@ export function Login() {
         <form onSubmit={absenden} className="space-y-4">
           <Feld label="E-Mail"><Eingabe type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></Feld>
           <Feld label="Passwort" fehler={fehler}><Eingabe type="password" autoComplete="current-password" required value={passwort} onChange={(e) => setPasswort(e.target.value)} /></Feld>
-          <Knopf type="submit" art="primaer" className="w-full">Anmelden</Knopf>
+          <Knopf type="submit" art="primaer" className="w-full" laedt={laeuft}>Anmelden</Knopf>
         </form>
-        <p className="mt-4 text-center text-xs text-slate-500">Passwort vergessen? Bitte an den Vorstand bzw. Administrator wenden – er setzt es im Adminbereich zurück.</p>
+        {CLOUD ? <button type="button" onClick={vergessen} className="mt-4 block w-full text-center text-sm font-medium text-primaer hover:underline">Passwort vergessen?</button>
+          : <p className="mt-4 text-center text-xs text-slate-500">Passwort vergessen? Bitte an den Vorstand bzw. Administrator wenden – er setzt es im Adminbereich zurück.</p>}
         {demo && (
           <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-xs text-amber-900 ring-1 ring-amber-200">
             <p className="mb-2 font-bold">Demo-Zugänge (vor dem Livegang im Admin ändern):</p>

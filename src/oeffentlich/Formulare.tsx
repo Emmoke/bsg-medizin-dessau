@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Send, ShieldCheck, PartyPopper } from 'lucide-react';
 import { Link } from '../router';
-import { hinzufuegen, jetztIso, neueId, useDaten } from '../daten/speicher';
+import { hinzufuegen, jetztIso, neueId } from '../daten/speicher';
+import { useDaten } from './daten';
 import { alterAm, ibanGueltig } from '../daten/auswertung';
 import type { Antrag } from '../daten/typen';
 import { useSeite } from '../seo';

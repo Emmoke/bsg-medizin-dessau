@@ -44,6 +44,8 @@ export interface Verein {
   vereinsheim?: Vereinsheim;
   links?: Verweis[];
   gaestebuchAktiv?: boolean;
+  /** Sportarten, die auf der öffentlichen Webseite ausgeblendet sind */
+  ausgeblendeteSportarten?: string[];
 }
 
 export interface Vereinsheim { name: string; text: string; oeffnungszeiten: string; telefon?: string; angebot?: string; bild?: string }
@@ -74,6 +76,8 @@ export interface Mannschaft {
   trainingszeiten: Trainingszeit[];
   reihenfolge: number;
   fussballDeUrl?: string;
+  /** Auf der Webseite zeigen (Standard: ja) – z. B. Abteilung im Aufbau ausblenden */
+  sichtbar?: boolean;
 }
 
 export interface Spieler {
@@ -231,10 +235,14 @@ export interface Datenbestand {
   gaestebuch: Gaestebucheintrag[];
   gegner: Gegnerverein[];
   protokoll: Protokolleintrag[];
+  /** Öffentliche Geburtstagsliste (nur Mitglieder mit Einwilligung, Nachname abgekürzt) – für Gäste ohne Zugriff auf die Mitgliederliste */
+  geburtstagsliste?: { vorname: string; nachname: string; datum: string; jahr: number }[];
+  /** Anzahl aktiver Mitglieder (öffentlich, ohne Namen) */
+  mitgliederAnzahl?: number;
   /** Seitenaufrufe je Tag: { "2026-10-25": 12 } */
   aufrufe: Record<string, number>;
 }
 
 /** Alle Sammlungen (Listen mit id) im Datenbestand */
-export type Sammlung = { [K in keyof Datenbestand]: Datenbestand[K] extends { id: string }[] ? K : never }[keyof Datenbestand];
+export type Sammlung = { [K in keyof Datenbestand]-?: Datenbestand[K] extends { id: string }[] ? K : never }[keyof Datenbestand];
 export type Eintrag<S extends Sammlung> = Datenbestand[S][number];

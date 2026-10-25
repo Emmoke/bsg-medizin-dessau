@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { FileText, MapPin, Clock, Phone, ExternalLink, Send, Check, MessageSquareQuote } from 'lucide-react';
 import { Link } from '../router';
-import { hinzufuegen, jetztIso, neueId, useDaten } from '../daten/speicher';
+import { hinzufuegen, jetztIso, neueId } from '../daten/speicher';
+import { useDaten } from './daten';
 import { bilanz, datumKurz, ergebnisText, paarung, uhrzeit } from '../daten/auswertung';
 import type { Datenbestand, News, Spiel } from '../daten/typen';
 import { useSeite } from '../seo';

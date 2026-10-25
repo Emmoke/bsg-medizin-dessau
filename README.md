@@ -42,3 +42,12 @@ src/
   ui/          Bausteine (Karte, Knopf, Feld, Dialog, Reiter, Hinweise …)
 tests/         node:test-Tests der Kernlogik
 ```
+
+## Firebase (Mehrbenutzerbetrieb)
+
+Projekt **bsg-medizin-dessau** (Spark-Tarif, kostenlos): Firebase Authentication (E-Mail/Passwort) und Firestore (Region eur3).
+Fotos werden verkleinert als eigene Dokumente in `medien` gespeichert – dafür ist kein kostenpflichtiger Storage nötig.
+
+- Ersteinrichtung: `/einrichtung` aufrufen (nur das freigegebene Einrichtungskonto, siehe `firestore.rules`).
+- Sicherheitsregeln einspielen: `npx firebase-tools deploy --only firestore:rules --project bsg-medizin-dessau`
+- Lokale Vorführversion ohne Server: Adresse mit `?demo` öffnen (`?demo=aus` beendet sie).

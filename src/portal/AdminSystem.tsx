@@ -5,6 +5,9 @@ import { Link } from '../router';
 import { aktualisieren, aufBeispielZuruecksetzen, entfernen, ersetzeAlles, hinzufuegen, jetztIso, neueId, sicherungAnlegen, sicherungen, sicherungHerunterladen, speichereEintrag, speicherGroesse, vereinAendern } from '../daten/speicher';
 import { ALLE_RECHTE, FESTE_RECHTE, RECHTE, ROLLEN, STANDARD_RECHTE, rollenName, type Recht, type Rolle } from '../daten/rechte';
 import { passwortHash } from '../daten/sha256';
+import { CLOUD } from '../daten/modus';
+import { fehlerText, kontoAnlegen } from '../daten/firebase';
+import { passwortLinkSenden } from '../daten/anmeldung';
 import { alsDatum, bilanz, datumKurz, ibanMaskieren, uhrzeit } from '../daten/auswertung';
 import type { Antrag, Benutzer, Datenbestand } from '../daten/typen';
 import { Auswahl, Dialog, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, bestaetigen, hinweis } from '../ui/bausteine';
@@ -85,7 +88,8 @@ export function BenutzerVerwaltung({ d, b }: SeitenProps) {
   const [offen, setOffen] = useState<(Benutzer & { neuesPasswort?: string }) | null>(null);
   const [rolle, setRolle] = useState<'alle' | Rolle>('alle');
   const liste = d.benutzer.filter((x) => rolle === 'alle' || x.rolle === rolle).sort((x, y) => x.nachname.localeCompare(y.nachname));
-  const speichern = () => {
+  const [laeuft, setLaeuft] = useState(false);
+  const speichern = async () => {
     if (!offen) return;
     const email = offen.email.trim().toLowerCase();
     if (!offen.vorname.trim() || !/^\S+@\S+\.\S+$/.test(email)) return hinweis('Name und gültige E-Mail angeben', 'fehler');
@@ -94,7 +98,21 @@ export function BenutzerVerwaltung({ d, b }: SeitenProps) {
     if (neu && !offen.neuesPasswort) return hinweis('Für neue Benutzer ein Startpasswort erzeugen', 'fehler');
     if (offen.id === b.id && offen.rolle !== 'admin' && b.rolle === 'admin' && !d.benutzer.some((x) => x.id !== b.id && x.rolle === 'admin' && x.aktiv)) return hinweis('Du bist der einzige Admin – Rolle kann nicht geändert werden', 'fehler');
     const { neuesPasswort, ...rest } = offen;
-    const emailGeaendert = d.benutzer.find((x) => x.id === offen.id)?.email.toLowerCase() !== email;
+    const emailGeaendert = !neu && d.benutzer.find((x) => x.id === offen.id)?.email.toLowerCase() !== email;
+    if (CLOUD) {
+      // Firebase: Konto in Firebase Authentication anlegen – die uid wird zur Benutzer-ID
+      if (emailGeaendert) return hinweis('Die Login-E-Mail kann nicht geändert werden. Bitte neuen Benutzer anlegen und den alten löschen.', 'fehler');
+      let id = rest.id;
+      if (neu) {
+        setLaeuft(true);
+        try { id = await kontoAnlegen(email, neuesPasswort!); } catch (e) { setLaeuft(false); return hinweis(fehlerText(e), 'fehler'); }
+        setLaeuft(false);
+      }
+      speichereEintrag('benutzer', { ...rest, id, email, passwortHash: '' }, `${neu ? 'Benutzer angelegt' : 'Benutzer geändert'}: ${offen.vorname} ${offen.nachname} (${rollenName(offen.rolle)})`);
+      hinweis(neu ? 'Konto angelegt – Startpasswort bitte sicher weitergeben' : 'Benutzer gespeichert');
+      setOffen(null);
+      return;
+    }
     if (emailGeaendert && !neuesPasswort) return hinweis('Bei geänderter E-Mail bitte ein neues Passwort erzeugen', 'fehler');
     speichereEintrag('benutzer', { ...rest, email, passwortHash: neuesPasswort ? passwortHash(email, neuesPasswort) : rest.passwortHash }, `${neu ? 'Benutzer angelegt' : 'Benutzer geändert'}: ${offen.vorname} ${offen.nachname} (${rollenName(offen.rolle)})`);
     hinweis('Benutzer gespeichert');
@@ -120,7 +138,7 @@ export function BenutzerVerwaltung({ d, b }: SeitenProps) {
       {offen && (
         <Dialog offen titel={offen.vorname ? `${offen.vorname} ${offen.nachname}` : 'Neuer Benutzer'} onClose={() => setOffen(null)}
           fuss={<>{d.benutzer.some((x) => x.id === offen.id) && offen.id !== b.id && <Knopf art="gefahr" className="mr-auto" onClick={() => { if (bestaetigen('Benutzer löschen? (Alternativ: sperren)')) { entfernen('benutzer', offen.id, `Benutzer gelöscht: ${offen.email}`); setOffen(null); } }}>Löschen</Knopf>}
-            <Knopf onClick={() => setOffen(null)}>Abbrechen</Knopf><Knopf art="primaer" onClick={speichern}>Speichern</Knopf></>}>
+            <Knopf onClick={() => setOffen(null)}>Abbrechen</Knopf><Knopf art="primaer" onClick={speichern} laedt={laeuft}>Speichern</Knopf></>}>
           <div className="grid gap-4 sm:grid-cols-2">
             <Feld label="Vorname"><Eingabe value={offen.vorname} onChange={(e) => setOffen({ ...offen, vorname: e.target.value })} /></Feld>
             <Feld label="Nachname"><Eingabe value={offen.nachname} onChange={(e) => setOffen({ ...offen, nachname: e.target.value })} /></Feld>
@@ -139,6 +157,7 @@ export function BenutzerVerwaltung({ d, b }: SeitenProps) {
             <div className="rounded-xl bg-slate-50 p-3 sm:col-span-2">
               <p className="flex items-center gap-2 text-sm font-medium"><KeyRound className="h-4 w-4" />Passwort</p>
               {offen.neuesPasswort ? <p className="mt-1 text-sm">Neues Passwort: <code className="rounded bg-white px-2 py-0.5 font-bold">{offen.neuesPasswort}</code> – bitte sicher weitergeben, es wird nach dem Speichern nicht mehr angezeigt.</p>
+                : CLOUD ? <Knopf klein className="mt-2" onClick={async () => { const f = await passwortLinkSenden(offen.email); hinweis(f ?? `Link zum Zurücksetzen an ${offen.email} geschickt`, f ? 'fehler' : 'ok'); }}>Link zum Zurücksetzen per E-Mail senden</Knopf>
                 : <Knopf klein className="mt-2" onClick={() => setOffen({ ...offen, neuesPasswort: zufallsPasswort() })}>Passwort zurücksetzen</Knopf>}
             </div>
             <Schalter an={offen.aktiv} onChange={(v) => setOffen({ ...offen, aktiv: v })} label="Zugang aktiv" beschreibung="Aus = Login gesperrt" />
@@ -290,10 +309,10 @@ export function Sicherung({ d }: SeitenProps) {
             </li>
           ))}</ul> : <p className="text-sm text-slate-500">Noch keine.</p>}
         </Karte>
-        <Karte titel="Demo zurücksetzen" className="lg:col-span-2">
+        {!CLOUD && <Karte titel="Demo zurücksetzen" className="lg:col-span-2">
           <p className="text-sm text-slate-600">Setzt alle Daten auf die Beispieldaten zurück. Nur für Vorführungen gedacht.</p>
           <Knopf art="gefahr" className="mt-3" onClick={() => { if (bestaetigen('Wirklich ALLE Daten durch Beispieldaten ersetzen?')) { sicherungAnlegen(true); aufBeispielZuruecksetzen(); hinweis('Zurückgesetzt'); } }}>Auf Beispieldaten zurücksetzen</Knopf>
-        </Karte>
+        </Karte>}
       </div>
     </>
   );

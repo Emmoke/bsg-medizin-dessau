@@ -155,13 +155,27 @@ export function MannschaftenVerwaltung({ d }: SeitenProps) {
     <>
       <Kopf titel="Abteilungen & Mannschaften" beschreibung="Neue Sportarten, Kurse und Teams jederzeit anlegen – jede Sportart ist möglich. Trainer zuordnen, Trainingszeiten und Ansprechpartner pflegen."
         aktionen={<Knopf art="primaer" onClick={() => setOffen({ id: '', name: '', kurz: '', sportart: 'Fußball', kategorie: 'Herren', trainerIds: [], betreuer: [], trainingszeiten: [], reihenfolge: liste.length + 1 })}><Plus className="h-4 w-4" />Neue Abteilung / Aktivität</Knopf>} />
+      <Karte titel="Auf der Webseite zeigen" className="mb-5">
+        <p className="mb-3 text-sm text-slate-500">Sportarten je nach Bedarf ein- oder ausblenden (z. B. eine Abteilung im Aufbau). Ausgeblendete Sportarten erscheinen nicht im Menü, nicht auf der Startseite und nicht im Spielplan – im Portal bleiben sie für Trainer und Verwaltung nutzbar.</p>
+        <div className="flex flex-wrap gap-2">
+          {[...new Set(d.mannschaften.map((m) => m.sportart))].sort().map((s) => {
+            const aus = (d.verein.ausgeblendeteSportarten ?? []).includes(s);
+            return (
+              <button key={s} onClick={() => vereinAendern({ ausgeblendeteSportarten: aus ? (d.verein.ausgeblendeteSportarten ?? []).filter((x) => x !== s) : [...(d.verein.ausgeblendeteSportarten ?? []), s] }, `Sportart ${s} ${aus ? 'eingeblendet' : 'ausgeblendet'}`)}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ring-1 transition ${aus ? 'bg-slate-100 text-slate-400 ring-slate-200 line-through' : 'bg-primaer/10 text-primaer ring-primaer/30'}`}>
+                <span className={`h-2.5 w-2.5 rounded-full ${aus ? 'bg-slate-300' : 'bg-emerald-500'}`} />{s} <span className="text-xs font-normal">({d.mannschaften.filter((m) => m.sportart === s).length})</span>
+              </button>
+            );
+          })}
+        </div>
+      </Karte>
       <Karte innen={false}>
         <ul className="divide-y divide-slate-100">{liste.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center gap-4 px-5 py-3">
             <MannschaftsBild m={m} v={d.verein} className="h-12 w-16 overflow-hidden rounded-lg" />
             <div className="min-w-0 flex-1"><p className="font-semibold">{m.name} <span className="text-xs font-normal text-slate-400">/{m.id}</span></p><p className="text-xs text-slate-500">{m.sportart} · {m.kategorie}{m.liga ? ` · ${m.liga}` : ''}</p></div>
             <span className="text-sm text-slate-500">{d.spieler.filter((p) => p.mannschaftId === m.id && p.aktiv).length} Spieler</span>
-            <span className="flex flex-wrap gap-1">{m.trainerIds.map((t) => { const x = d.benutzer.find((y) => y.id === t); return x ? <Marke key={t} ton="blau">{x.vorname} {x.nachname}</Marke> : null; })}{!m.trainerIds.length && <Marke ton="gelb">kein Trainerzugang</Marke>}</span>
+            <span className="flex flex-wrap gap-1">{m.trainerIds.map((t) => { const x = d.benutzer.find((y) => y.id === t); return x ? <Marke key={t} ton="blau">{x.vorname} {x.nachname}</Marke> : null; })}{!m.trainerIds.length && <Marke ton="gelb">kein Trainerzugang</Marke>}{(m.sichtbar === false || (d.verein.ausgeblendeteSportarten ?? []).includes(m.sportart)) && <Marke ton="grau">ausgeblendet</Marke>}</span>
             <button onClick={() => setOffen(m)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-primaer" aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></button>
           </li>
         ))}</ul>
@@ -181,6 +195,7 @@ export function MannschaftenVerwaltung({ d }: SeitenProps) {
             <Feld label="Beschreibung" className="sm:col-span-2"><Textbereich rows={3} value={offen.beschreibung ?? ''} onChange={(e) => setOffen({ ...offen, beschreibung: e.target.value })} /></Feld>
             <Feld label="Reihenfolge"><Eingabe type="number" value={offen.reihenfolge} onChange={(e) => setOffen({ ...offen, reihenfolge: Number(e.target.value) })} /></Feld>
             <div className="sm:col-span-2"><BildWahl wert={offen.bild} onChange={(bild) => setOffen({ ...offen, bild })} label="Mannschaftsfoto" /></div>
+            <div className="pt-6"><Schalter an={offen.sichtbar !== false} onChange={(v) => setOffen({ ...offen, sichtbar: v })} label="Auf der Webseite zeigen" beschreibung="Aus = nur im Portal sichtbar" /></div>
             <Feld label="Link FUSSBALL.DE (optional)"><Eingabe type="url" value={offen.fussballDeUrl ?? ''} onChange={(e) => setOffen({ ...offen, fussballDeUrl: e.target.value || undefined })} /></Feld>
           </div>
           <p className="mb-2 mt-6 text-sm font-semibold">Trainerzugang (Benutzer mit Rechten auf diese Mannschaft)</p>

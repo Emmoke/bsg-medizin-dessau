@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Users, CalendarDays, ListOrdered, BarChart3, Info, Mail } from 'lucide-react';
 import { Link, navigiere, useSuche } from '../router';
-import { useDaten } from '../daten/speicher';
+import { useDaten } from './daten';
 import { bilanz, form, naechsteSpiele, spielerName, spielerStatistik, type Spielerwerte } from '../daten/auswertung';
 import type { Datenbestand, Kategorie, Mannschaft } from '../daten/typen';
 import { useSeite } from '../seo';

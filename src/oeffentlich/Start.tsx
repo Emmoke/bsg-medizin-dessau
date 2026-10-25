@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, Cake, MapPin, Clock, Download, Mail } from 'lucide-react';
 import { Link } from '../router';
-import { useDaten } from '../daten/speicher';
+import { useDaten } from './daten';
 import { alsDatum, datumKurz, geburtstage, letzteSpiele, naechsteSpiele, paarung, spielerName, uhrzeit } from '../daten/auswertung';
 import { useSeite } from '../seo';
 import { ShapeWaves } from '../effekte/ShapeWaves';
@@ -46,7 +46,7 @@ export function Start() {
   const ersteTabelle = d.tabellen[0];
   const teams = [...d.mannschaften].sort((a, b) => a.reihenfolge - b.reihenfolge);
   const sportarten = new Set(teams.map((m) => m.sportart));
-  const mitglieder = d.mitglieder.filter((m) => m.status !== 'ausgetreten').length;
+  const mitglieder = Math.max(d.mitglieder.filter((m) => m.status !== 'ausgetreten' && m.eintritt).length, d.mitgliederAnzahl ?? 0);
   const fotos = [...new Set([v.titelbild, ...d.alben.filter((a) => a.oeffentlich).flatMap((a) => a.bilder.map((b) => b.src)), ...teams.map((m) => m.bild)]
     .filter((x): x is string => !!x && !x.startsWith('data:image/svg')))].slice(0, 6);
   const antrag = d.dokumente.find((x) => x.sichtbar === 'oeffentlich' && /antrag/i.test(x.titel));
