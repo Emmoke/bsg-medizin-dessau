@@ -27,7 +27,7 @@ function wochentag(tag: number, wochen: number, uhr: string): string {
   return zeitpunkt(bis + wochen * 7, uhr);
 }
 
-const BLAU = '#0a4d8c', DUNKEL = '#062b52', GOLD = '#f5b301';
+const BLAU = '#1f7a33', DUNKEL = '#0c3b18', GOLD = '#e3001b';
 
 const VORNAMEN = ['Lukas', 'Max', 'Paul', 'Felix', 'Jonas', 'Leon', 'Tim', 'Niklas', 'Tom', 'Erik', 'Moritz', 'Ben', 'Philipp', 'Florian', 'Kevin',
   'Marcel', 'Dennis', 'Sebastian', 'Tobias', 'Robert', 'Steffen', 'Martin'];
@@ -53,6 +53,7 @@ export function beispielDaten(): Datenbestand {
     ueberUns: 'Die BSG Medizin Dessau ist ein familiärer Sportverein mitten in Dessau-Roßlau. Vom Bambini-Fußball über die Herren bis zum Gesundheitssport finden hier alle Generationen ihren Platz. (Beispieltext – im Adminbereich unter „Verein“ anpassen.)',
     farbePrimaer: BLAU,
     farbeAkzent: GOLD,
+    logo: `${import.meta.env?.BASE_URL ?? '/'}wappen.png`,
     strasse: 'Sportplatzweg 1', plz: '06844', ort: 'Dessau-Roßlau',
     email: 'info@bsg-medizin-dessau.de', telefon: '0340 000000',
     facebook: 'https://www.facebook.com/', instagram: 'https://www.instagram.com/',

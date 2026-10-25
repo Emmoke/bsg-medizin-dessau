@@ -105,7 +105,7 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
   return (
     <>
       <SeitenKopf titel={m.name} bild={m.bild} krumen={[{ text: 'Mannschaften', zu: '/mannschaften' }, { text: m.name }]}
-        unter={<span className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/15 px-3 py-0.5 text-sm">{m.sportart}</span>{m.liga && <span className="rounded-full bg-akzent px-3 py-0.5 text-sm font-semibold text-slate-900">{m.liga}</span>}<span className="text-sm">Saison {saison}</span></span>}>
+        unter={<span className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/15 px-3 py-0.5 text-sm">{m.sportart}</span>{m.liga && <span className="rounded-full bg-akzent px-3 py-0.5 text-sm font-semibold text-white">{m.liga}</span>}<span className="text-sm">Saison {saison}</span></span>}>
         {b.spiele > 0 && (
           <div className="mt-6 flex flex-wrap gap-3">
             {[['Spiele', b.spiele], ['Siege', b.s], ['Remis', b.u], ['Niederl.', b.n], ['Tore', `${b.tore}:${b.gegentore}`]].map(([t, w]) => (

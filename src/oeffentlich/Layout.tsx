@@ -114,7 +114,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {menue.map((p) => <Aufklapp key={p.text} p={p} />)}
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/mitglied-werden" className="hidden rounded-full bg-akzent px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:brightness-105 sm:inline-flex">Mitglied werden</Link>
+            <Link to="/mitglied-werden" className="hidden rounded-full bg-akzent px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-105 sm:inline-flex">Mitglied werden</Link>
             <button className="rounded-lg p-2 text-slate-700 hover:bg-slate-100 xl:hidden" onClick={() => setMobil(!mobil)} aria-label="Menü" aria-expanded={mobil}>
               {mobil ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -136,7 +136,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
             ))}
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Link to="/mitglied-werden" className="rounded-xl bg-akzent px-4 py-3 text-center font-bold text-slate-900">Mitglied werden</Link>
+              <Link to="/mitglied-werden" className="rounded-xl bg-akzent px-4 py-3 text-center font-bold text-white">Mitglied werden</Link>
               <Link to={benutzer ? '/intern' : '/login'} className="rounded-xl bg-primaer px-4 py-3 text-center font-bold text-white">{benutzer ? 'Mein Bereich' : 'Login'}</Link>
             </div>
           </div>

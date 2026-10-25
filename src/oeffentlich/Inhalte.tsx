@@ -292,7 +292,7 @@ export function Sponsoren() {
         <div className="mx-auto max-w-3xl rounded-3xl bg-slate-900 p-8 text-center text-white">
           <h2 className="text-2xl font-extrabold">Sponsor werden</h2>
           <p className="mt-2 text-white/70">Bandenwerbung, Trikotsponsoring, Jugendförderung oder Spieltagspartner – wir finden das passende Paket.</p>
-          <Link to={`/kontakt?an=Sponsoring&betreff=${encodeURIComponent('Sponsoring-Anfrage')}`} className="mt-5 inline-flex rounded-full bg-akzent px-6 py-3 font-bold text-slate-900">Kontakt aufnehmen</Link>
+          <Link to={`/kontakt?an=Sponsoring&betreff=${encodeURIComponent('Sponsoring-Anfrage')}`} className="mt-5 inline-flex rounded-full bg-akzent px-6 py-3 font-bold text-white">Kontakt aufnehmen</Link>
         </div>
       </Inhalt>
     </>

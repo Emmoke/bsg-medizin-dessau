@@ -55,7 +55,7 @@ export function VereinSeite({ teil }: { teil: VereinTeil }) {
                 <p className="mt-3 flex gap-2 text-white/85"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{v.strasse}, {v.plz} {v.ort}</p>
                 <p className="mt-2 flex gap-2 text-white/85"><Mail className="mt-0.5 h-4 w-4" /><a href={`mailto:${v.email}`}>{v.email}</a></p>
                 <p className="mt-2 flex gap-2 text-white/85"><Phone className="mt-0.5 h-4 w-4" /><a href={`tel:${v.telefon.replace(/\s/g, '')}`}>{v.telefon}</a></p>
-                <Link to="/kontakt" className="mt-5 inline-flex rounded-full bg-akzent px-5 py-2 text-sm font-bold text-slate-900">Nachricht schreiben</Link>
+                <Link to="/kontakt" className="mt-5 inline-flex rounded-full bg-akzent px-5 py-2 text-sm font-bold text-white">Nachricht schreiben</Link>
               </div>
               <div className="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
                 <h3 className="text-lg font-bold">Beiträge</h3>

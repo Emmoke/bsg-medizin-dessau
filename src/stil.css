@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Vereinsfarben kommen aus den Vereinsdaten (Admin → Verein → Farben) und werden zur Laufzeit gesetzt */
-:root { --primaer: #0a4d8c; --akzent: #f5b301; --primaer-dunkel: color-mix(in oklab, var(--primaer) 55%, #020617); }
+:root { --primaer: #1f7a33; --akzent: #e3001b; --primaer-dunkel: color-mix(in oklab, var(--primaer) 55%, #020617); }
 
 @theme inline {
   --color-primaer: var(--primaer);

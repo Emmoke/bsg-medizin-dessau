@@ -37,7 +37,7 @@ export function Start() {
             <h1 className="ein-2 text-ausgleich mt-5 text-4xl font-black leading-[1.05] tracking-tight sm:text-6xl">{v.name}</h1>
             <p className="ein-3 mt-4 max-w-xl text-lg text-white/80 sm:text-xl">{v.slogan}</p>
             <div className="ein-3 mt-8 flex flex-wrap gap-3">
-              <Link to="/mitglied-werden" className="inline-flex items-center gap-2 rounded-full bg-akzent px-6 py-3 font-bold text-slate-900 shadow-lg shadow-black/20 transition hover:brightness-105">Jetzt Mitglied werden <ArrowRight className="h-4 w-4" /></Link>
+              <Link to="/mitglied-werden" className="inline-flex items-center gap-2 rounded-full bg-akzent px-6 py-3 font-bold text-white shadow-lg shadow-black/20 transition hover:brightness-105">Jetzt Mitglied werden <ArrowRight className="h-4 w-4" /></Link>
               <Link to="/verein/trainingszeiten" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-6 py-3 font-semibold ring-1 ring-white/30 transition hover:bg-white/20">Probetraining</Link>
             </div>
             <dl className="mt-10 grid max-w-lg grid-cols-3 gap-3">
@@ -83,12 +83,12 @@ export function Start() {
 
       {glueckwuensche.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="ein flex flex-col items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-r from-akzent to-amber-300 p-6 text-slate-900 sm:flex-row sm:p-8">
+          <div className="ein flex flex-col items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-r from-akzent to-rose-500 p-6 text-white sm:flex-row sm:p-8">
             <Cake className="h-12 w-12 shrink-0" />
             <div className="flex-1 text-center sm:text-left">
               <p className="text-sm font-bold uppercase tracking-widest">Happy Birthday</p>
               <p className="mt-1 text-xl font-extrabold">{glueckwuensche.map((g) => `${spielerName(g.mitglied, true)} zum ${g.alter}. Geburtstag`).join(' · ')}</p>
-              <p className="mt-1 text-sm text-slate-800">Die {v.kurzname} wünscht alles Gute, viel Gesundheit und weiterhin viel Erfolg in unserem Verein!</p>
+              <p className="mt-1 text-sm text-white/90">Die {v.kurzname} wünscht alles Gute, viel Gesundheit und weiterhin viel Erfolg in unserem Verein!</p>
             </div>
           </div>
         </section>
@@ -138,7 +138,7 @@ export function Start() {
             <Trophy className="h-8 w-8 text-akzent" />
             <p className="mt-3 text-xl font-extrabold">Werde Teil der {v.kurzname}!</p>
             <p className="mt-1 text-sm text-white/70">Online-Mitgliedsantrag in 3 Minuten – Probetraining jederzeit möglich.</p>
-            <Link to="/mitglied-werden" className="mt-4 inline-flex items-center gap-2 rounded-full bg-akzent px-5 py-2.5 text-sm font-bold text-slate-900">Mitglied werden <ArrowRight className="h-4 w-4" /></Link>
+            <Link to="/mitglied-werden" className="mt-4 inline-flex items-center gap-2 rounded-full bg-akzent px-5 py-2.5 text-sm font-bold text-white">Mitglied werden <ArrowRight className="h-4 w-4" /></Link>
           </div>
         </div>
         {ersteTabelle && (

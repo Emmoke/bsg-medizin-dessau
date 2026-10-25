@@ -80,7 +80,7 @@ export function VereinVerwaltung({ d }: SeitenProps) {
                 <Feld label="Akzentfarbe"><div className="flex gap-2"><input type="color" value={v.farbeAkzent} onChange={(e) => setze('farbeAkzent', e.target.value)} className="h-10 w-14 rounded-lg border border-slate-300" /><Eingabe value={v.farbeAkzent} onChange={(e) => setze('farbeAkzent', e.target.value)} /></div></Feld>
               </div>
               <div className="overflow-hidden rounded-2xl text-white" style={{ background: `linear-gradient(135deg, ${v.farbePrimaer}, #020617)` }}>
-                <div className="p-5"><p className="text-xs opacity-70">Vorschau</p><p className="text-xl font-extrabold">{v.name}</p><span className="mt-3 inline-flex rounded-full px-4 py-1.5 text-sm font-bold text-slate-900" style={{ background: v.farbeAkzent }}>Mitglied werden</span></div>
+                <div className="p-5"><p className="text-xs opacity-70">Vorschau</p><p className="text-xl font-extrabold">{v.name}</p><span className="mt-3 inline-flex rounded-full px-4 py-1.5 text-sm font-bold text-white" style={{ background: v.farbeAkzent }}>Mitglied werden</span></div>
               </div>
             </div>
           </Karte>
