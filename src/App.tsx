@@ -11,6 +11,8 @@ import { Spielbericht, Spielbetrieb, type SpielbetriebTeil } from './oeffentlich
 import { Album, Galerie, Login, NewsArtikel, NewsListe, NichtGefunden, Sponsoren, Veranstaltungen } from './oeffentlich/Inhalte';
 import { Kontakt, MitgliedWerden } from './oeffentlich/Formulare';
 import { Portal } from './portal/Portal';
+import { Archiv, Besucherstatistik, Gaestebuch, Links, Vereinsheim } from './oeffentlich/Extras';
+import { Fortschritt, nachOben, useSeitenBewegung, weichesScrollen } from './effekte/bewegung';
 
 const VEREIN: Record<string, VereinTeil> = {
   '/verein': 'ueber', '/verein/vorstand': 'vorstand', '/verein/geschichte': 'geschichte', '/verein/satzung': 'satzung',
@@ -37,6 +39,11 @@ function OeffentlicheSeite({ pfad }: { pfad: string }) {
   if (pfad === '/mitglied-werden') return <MitgliedWerden />;
   if (pfad === '/kontakt') return <Kontakt />;
   if (pfad === '/login') return <Login />;
+  if (pfad === '/spielbetrieb/archiv') return <Archiv />;
+  if (pfad === '/vereinsheim') return <Vereinsheim />;
+  if (pfad === '/links') return <Links />;
+  if (pfad === '/gaestebuch') return <Gaestebuch />;
+  if (pfad === '/besucherstatistik') return <Besucherstatistik />;
   return <NichtGefunden />;
 }
 
@@ -52,9 +59,13 @@ export function App() {
   }, [farbePrimaer, farbeAkzent]);
   const portal = /^\/(intern|trainer|admin)(\/|$)/.test(pfad);
   useEffect(() => { if (!portal) aufrufZaehlen(); }, [pfad, portal]);
+  useEffect(() => { weichesScrollen(); }, []);
+  useEffect(() => { nachOben(); }, [pfad]);
+  useSeitenBewegung(pfad);
 
   return (
     <>
+      {!portal && <Fortschritt />}
       {portal ? <Portal pfad={pfad} /> : <Layout><OeffentlicheSeite pfad={pfad} /></Layout>}
       <Hinweise />
     </>

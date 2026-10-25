@@ -1,7 +1,7 @@
 // Mannschaften: Übersicht nach Bereichen, Trainerliste und Mannschaftsseite mit Team, Spielplan, Tabelle und Statistik.
 import { useState } from 'react';
 import { Users, CalendarDays, ListOrdered, BarChart3, Info, Mail } from 'lucide-react';
-import { Link, navigiere } from '../router';
+import { Link, navigiere, useSuche } from '../router';
 import { useDaten } from '../daten/speicher';
 import { bilanz, form, naechsteSpiele, spielerName, spielerStatistik, type Spielerwerte } from '../daten/auswertung';
 import type { Datenbestand, Kategorie, Mannschaft } from '../daten/typen';
@@ -11,7 +11,7 @@ import { AusgangPunkt, Inhalt, SeitenKopf, SpielZeile, TabellenAnsicht, Training
 import { NichtGefunden } from './Inhalte';
 import { FigurAvatar, MannschaftsBild, SportSzene, Teamfoto, altersgruppe, echtesFoto, fotoFuer } from './SportSzene';
 
-const BEREICHE: Kategorie[] = ['Herren', 'Frauen', 'Senioren', 'Jugend', 'Freizeit'];
+const BEREICHE: Kategorie[] = ['Erwachsene', 'Freizeit', 'Jugend', 'Herren', 'Frauen', 'Senioren'];
 
 export function MannschaftenUebersicht() {
   const d = useDaten();
@@ -19,14 +19,14 @@ export function MannschaftenUebersicht() {
   const teams = [...d.mannschaften].sort((a, b) => a.reihenfolge - b.reihenfolge);
   return (
     <>
-      <SeitenKopf titel="Mannschaften" krumen={[{ text: 'Mannschaften' }]} unter={`${teams.length} Teams in ${new Set(teams.map((m) => m.sportart)).size} Sportarten`} />
+      <SeitenKopf titel="Abteilungen & Mannschaften" krumen={[{ text: 'Abteilungen' }]} unter={`${teams.length} Teams in ${new Set(teams.map((m) => m.sportart)).size} Sportarten`} />
       <Inhalt>
         {BEREICHE.map((k) => {
           const liste = teams.filter((m) => m.kategorie === k);
           if (!liste.length) return null;
           return (
             <section key={k} className="mb-12">
-              <h2 className="mb-4 flex items-center gap-3 text-2xl font-extrabold">{k === 'Senioren' ? 'Senioren & Gesundheit' : k}<span className="h-px flex-1 bg-slate-200" /></h2>
+              <h2 className="mb-4 flex items-center gap-3 text-2xl font-extrabold">{({ Erwachsene: 'Sport für Erwachsene', Freizeit: 'Fitness, Gesundheit & Freizeit', Jugend: 'Kinder & Jugend', Herren: 'Fußball Herren', Frauen: 'Fußball Frauen', Senioren: 'Senioren' } as Record<string, string>)[k] ?? k}<span className="h-px flex-1 bg-slate-200" /></h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{liste.map((m) => <MannschaftKarte key={m.id} m={m} d={d} />)}</div>
             </section>
           );
@@ -86,11 +86,14 @@ type Reiter = 'uebersicht' | 'team' | 'spielplan' | 'tabelle' | 'statistik';
 
 export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; reiter?: string }) {
   const d = useDaten();
+  const suche = useSuche();
   const m = d.mannschaften.find((x) => x.id === id);
   useSeite(m ? `${m.name}${m.liga ? ` – ${m.liga}` : ''}` : 'Mannschaft', m ? `${m.name} der ${d.verein.name}: Team, Spielplan, Ergebnisse, Tabelle, Statistik und Trainingszeiten.` : undefined);
   if (!m) return <NichtGefunden />;
   const aktiv = (['uebersicht', 'team', 'spielplan', 'tabelle', 'statistik'].includes(reiter) ? reiter : 'uebersicht') as Reiter;
-  const saison = d.verein.saison;
+  // Archiv: ?saison=2025/26 zeigt eine frühere Spielzeit
+  const saisons = [...new Set(d.spiele.filter((s) => s.mannschaftId === id).map((s) => s.saison))].sort().reverse();
+  const saison = new URLSearchParams(suche).get('saison') ?? d.verein.saison;
   const spieleM = d.spiele.filter((s) => s.mannschaftId === m.id && s.saison === saison).sort((a, b) => a.datum.localeCompare(b.datum));
   const kader = d.spieler.filter((p) => p.mannschaftId === m.id && p.aktiv);
   const tabelle = d.tabellen.find((t) => t.mannschaftId === m.id);
@@ -123,6 +126,11 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
               <r.icon className="h-4 w-4" />{r.text}
             </button>
           ))}
+          {saisons.length > 1 && (
+            <select value={saison} onChange={(e) => navigiere(`/mannschaften/${m.id}/${aktiv === 'uebersicht' ? 'spielplan' : aktiv}?saison=${encodeURIComponent(e.target.value)}`)} className="my-2 ml-auto rounded-lg border border-slate-300 px-2 text-sm" aria-label="Saison wählen">
+              {saisons.map((x) => <option key={x} value={x}>Saison {x}{x === d.verein.saison ? ' (aktuell)' : ''}</option>)}
+            </select>
+          )}
         </nav>
       </div>
       <Inhalt>

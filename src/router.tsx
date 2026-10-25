@@ -59,3 +59,6 @@ export function useAktiv(praefix: string): boolean {
   const pfad = usePfad();
   return praefix === '/' ? pfad === '/' : pfad === praefix || pfad.startsWith(praefix + '/');
 }
+
+/** Aktuelle Suchparameter (z. B. ?saison=2025/26) – aktualisiert sich bei jeder Navigation */
+export function useSuche(): string { return useSyncExternalStore(abonnieren, () => location.search, () => ''); }

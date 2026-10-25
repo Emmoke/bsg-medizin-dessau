@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Clock } from 'lucide-react';
 import { Link } from '../router';
+import { lesen } from '../daten/speicher';
 import type { Datenbestand, Mannschaft, News, Spiel, Tabelle, Verein } from '../daten/typen';
 import { alsDatum, ausgang, datumKurz, datumLang, ergebnisText, paarung, uhrzeit, type Ausgang } from '../daten/auswertung';
 
@@ -16,14 +17,22 @@ export function Wappen({ verein, groesse = 44, hell = false }: { verein: Verein;
   );
 }
 
-/** Gegner-Logo: Kreis mit Initialen (echte Logos sind lizenzpflichtig) */
+/** Verein aus der Gegner-Datenbank zu einem Mannschaftsnamen (z. B. „Dessauer SV 97 II“ → „Dessauer SV 97“) */
+export function gegnerVerein(name: string) {
+  const n = name.trim().toLowerCase();
+  return lesen().gegner.filter((g) => n.startsWith(g.name.toLowerCase())).sort((a, b) => b.name.length - a.name.length)[0];
+}
+
+/** Gegner-Logo aus der Gegner-Datenbank, sonst Kreis mit Initialen in Vereinsfarbe */
 export function GegnerMarke({ name, klein }: { name: string; klein?: boolean }) {
+  const gv = gegnerVerein(name);
+  if (gv?.logo) return <img src={gv.logo} alt="" className={`shrink-0 rounded-full bg-white object-contain p-0.5 ${klein ? 'h-7 w-7' : 'h-11 w-11'}`} />;
   const initialen = name.replace(/\b(SV|SG|FC|FSV|TSV|VfB|SF|BSG)\b/g, '').trim().split(/[\s-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || name.slice(0, 2);
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
   return (
     <span className={`inline-flex shrink-0 items-center justify-center rounded-full font-bold text-white ${klein ? 'h-7 w-7 text-[10px]' : 'h-11 w-11 text-sm'}`}
-      style={{ background: `hsl(${h} 45% 42%)` }} aria-hidden>{initialen}</span>
+      style={{ background: gv?.farbe ?? `hsl(${h} 45% 42%)` }} aria-hidden>{initialen}</span>
   );
 }
 

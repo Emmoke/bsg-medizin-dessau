@@ -181,3 +181,27 @@ Phase 2:          derselbe Speicher-Adapter auf Firebase:
 
 **Go-Live-Checkliste:** Demo-Benutzer gelöscht · Impressum/Datenschutz geprüft · Einwilligungen für Fotos vorhanden ·
 Backup heruntergeladen · Saison korrekt · Kontaktformular-Empfänger stimmen · Sitemap-Domain gesetzt (`DOMAIN=` beim Build).
+
+---
+
+## 8. Stand 25.10.2026 (Abend) – Ergänzungen
+
+**Echte Vereinsdaten von bsg-medizin.de übernommen** (mit Freigabe des Vereins): Vorstand (Sipan Khalil, Huner Khalil),
+Abteilungen Badminton, Feldenkrais, Sportschießen (inkl. Jugend ab 14), Zumba® mit Trainingszeiten und Ansprechpartnern,
+Sportstätten (Alexianer, Zoberberg, Schießstand Roßlau), Beitragsordnung ab 2018, Impressum (VR 2657), Mitteilungen,
+Fotos (Zumba, Step, Piloxing, Karate, Sportschießen) und PDFs (Mitgliedsantrag, Beitragsordnung, Satzung, Fotoerlaubnis,
+Hallenbelegungsplan) unter `public/bsg/`. Kontakt nur per E-Mail – Telefonfelder werden ausgeblendet, wenn leer.
+
+**Abteilung Fußball (im Aufbau)** bleibt mit Mannschaften nach Vorbild DSV 97 erhalten (Beispieldaten, als solche markiert).
+**Neue Sportarten/Aktivitäten** jederzeit unter Verwaltung → „Abteilungen & Teams“ → „Neue Abteilung / Aktivität“ (freie Sportart).
+
+**Design & Effekte** (wie emmoke.de, alle kostenlos): GSAP + ScrollTrigger + SplitText (Überschrift Wort für Wort, Einblenden beim
+Scrollen), Lenis (weiches Scrollen), ShapeWaves-Schriftzug, Count-Up-Zähler, Spotlight-Karten, Magnet-Knöpfe, Fotowechsel mit
+Ken-Burns-Effekt, Filmkorn statt Streifen. Bewegte Szenen je Sportart und Altersgruppe (Fußball, Badminton, Sportschießen,
+Zumba/Tanz, Feldenkrais/Gesundheit, Volleyball), Mannschaftsbild aus Spieler- und Trainerfiguren; echte Fotos ersetzen die Szene.
+
+**Wie dessauer-sv97.de:** Willkommen, „Vorschau“-Liste, Glückwünsche, Neuigkeiten mit [mehr], Archiv früherer Saisons,
+Gästebuch (mit Freigabe), Links, Besucherstatistik, Vereinsheim (optional).
+
+**Gegner-Datenbank:** Vereine der Umgebung mit Logo und Mannschaften je Sportart/Altersklasse; beim Spiel-Anlegen passende
+Vorschläge, Logo erscheint überall. Logos fremder Vereine nur mit deren Erlaubnis hochladen.

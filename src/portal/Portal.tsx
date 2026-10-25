@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Bell, CalendarDays, FileText, UserCircle, Users, ClipboardCheck, Trophy, Camera, Newspaper, Images, Handshake, Building2,
-  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard,
+  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard, Swords, Globe, BookOpen,
 } from 'lucide-react';
 import { Link, navigiere, usePfad } from '../router';
 import { speicherFehler, useDaten } from '../daten/speicher';
@@ -16,6 +16,7 @@ import { Kader, MeineTeams, TrainerMedien, TrainerSpiele, Trainingsplanung } fro
 import { MedienVerwaltung, NewsVerwaltung, SponsorenVerwaltung, TermineVerwaltung, DokumenteVerwaltung } from './AdminInhalte';
 import { MannschaftenVerwaltung, MitgliederVerwaltung, SpieleVerwaltung, VereinVerwaltung } from './AdminVerein';
 import { BenutzerVerwaltung, Dashboard, FormulareVerwaltung, ProtokollAnsicht, RechteVerwaltung, Sicherung } from './AdminSystem';
+import { GaestebuchVerwaltung, GegnerVerwaltung, WebseiteVerwaltung } from './AdminWeb';
 
 export interface SeitenProps { d: Datenbestand; b: Benutzer }
 interface Eintrag { pfad: string; text: string; icon: typeof Bell; recht: Recht; seite: (p: SeitenProps) => React.ReactNode; zahl?: (d: Datenbestand, b: Benutzer) => number }
@@ -43,8 +44,11 @@ const BEREICHE: { titel: string; eintraege: Eintrag[] }[] = [
     { pfad: '/admin/medien', text: 'Galerie & Videos', icon: Images, recht: 'medien.verwalten', seite: (p) => <MedienVerwaltung {...p} /> },
     { pfad: '/admin/sponsoren', text: 'Sponsoren', icon: Handshake, recht: 'sponsoren.verwalten', seite: (p) => <SponsorenVerwaltung {...p} /> },
     { pfad: '/admin/verein', text: 'Verein', icon: Building2, recht: 'verein.verwalten', seite: (p) => <VereinVerwaltung {...p} /> },
-    { pfad: '/admin/mannschaften', text: 'Mannschaften', icon: Shield, recht: 'mannschaften.verwalten', seite: (p) => <MannschaftenVerwaltung {...p} /> },
+    { pfad: '/admin/mannschaften', text: 'Abteilungen & Teams', icon: Shield, recht: 'mannschaften.verwalten', seite: (p) => <MannschaftenVerwaltung {...p} /> },
     { pfad: '/admin/spiele', text: 'Spiele & Tabellen', icon: ListChecks, recht: 'spiele.verwalten', seite: (p) => <SpieleVerwaltung {...p} /> },
+    { pfad: '/admin/gegner', text: 'Gegner & Vereine', icon: Swords, recht: 'spiele.verwalten', seite: (p) => <GegnerVerwaltung {...p} /> },
+    { pfad: '/admin/webseite', text: 'Webseite', icon: Globe, recht: 'verein.verwalten', seite: (p) => <WebseiteVerwaltung {...p} /> },
+    { pfad: '/admin/gaestebuch', text: 'Gästebuch', icon: BookOpen, recht: 'news.verwalten', seite: (p) => <GaestebuchVerwaltung {...p} />, zahl: (d) => d.gaestebuch.filter((g) => g.status === 'neu').length },
     { pfad: '/admin/mitglieder', text: 'Mitglieder', icon: IdCard, recht: 'mitglieder.verwalten', seite: (p) => <MitgliederVerwaltung {...p} /> },
     { pfad: '/admin/formulare', text: 'Anträge & Anfragen', icon: Inbox, recht: 'formulare.verwalten', seite: (p) => <FormulareVerwaltung {...p} />,
       zahl: (d) => d.antraege.filter((a) => a.status === 'neu').length + d.anfragen.filter((a) => a.status === 'neu').length },

@@ -16,19 +16,20 @@ interface Punkt { text: string; zu: string; unter?: { text: string; zu: string; 
 
 function useMenue(): Punkt[] {
   const d = useDaten();
-  const reihen: Kategorie[] = ['Herren', 'Frauen', 'Senioren', 'Jugend', 'Freizeit'];
+  const reihen: Kategorie[] = ['Erwachsene', 'Freizeit', 'Jugend', 'Herren', 'Frauen', 'Senioren'];
   const teams = [...d.mannschaften].sort((a, b) => a.reihenfolge - b.reihenfolge);
   return [
     { text: 'Verein', zu: '/verein', unter: [
       { text: 'Über uns', zu: '/verein' }, { text: 'Vorstand', zu: '/verein/vorstand' }, { text: 'Geschichte', zu: '/verein/geschichte' },
       { text: 'Satzung', zu: '/verein/satzung' }, { text: 'Trainingszeiten', zu: '/verein/trainingszeiten' }, { text: 'Sportstätten', zu: '/verein/sportstaetten' },
-      { text: 'Downloads', zu: '/downloads' }] },
-    { text: 'Mannschaften', zu: '/mannschaften', unter: [
+      ...(d.verein.vereinsheim ? [{ text: 'Vereinsheim', zu: '/vereinsheim' }] : []),
+      { text: 'Downloads', zu: '/downloads' }, { text: 'Gästebuch', zu: '/gaestebuch' }, { text: 'Links', zu: '/links' }] },
+    { text: 'Abteilungen', zu: '/mannschaften', unter: [
       ...reihen.flatMap((k) => teams.filter((m) => m.kategorie === k).map((m) => ({ text: m.name, zu: `/mannschaften/${m.id}`, gruppe: k }))),
       { text: 'Alle Trainer & Betreuer', zu: '/mannschaften/trainer', gruppe: 'Team' }] },
     { text: 'Spielbetrieb', zu: '/spielbetrieb/spielplan', unter: [
       { text: 'Spielplan', zu: '/spielbetrieb/spielplan' }, { text: 'Ergebnisse', zu: '/spielbetrieb/ergebnisse' },
-      { text: 'Tabellen', zu: '/spielbetrieb/tabellen' }, { text: 'Spielerstatistik', zu: '/spielbetrieb/statistik' }] },
+      { text: 'Tabellen', zu: '/spielbetrieb/tabellen' }, { text: 'Spielerstatistik', zu: '/spielbetrieb/statistik' }, { text: 'Archiv', zu: '/spielbetrieb/archiv' }] },
     { text: 'News', zu: '/news' },
     { text: 'Termine', zu: '/veranstaltungen' },
     { text: 'Galerie', zu: '/galerie' },
@@ -88,7 +89,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-1.5">
           <div className="flex items-center gap-5">
             <a href={`mailto:${v.email}`} className="inline-flex items-center gap-1.5 hover:text-white"><Mail className="h-3.5 w-3.5" />{v.email}</a>
-            <a href={`tel:${v.telefon.replace(/\s/g, '')}`} className="inline-flex items-center gap-1.5 hover:text-white"><Phone className="h-3.5 w-3.5" />{v.telefon}</a>
+            {v.telefon && <a href={`tel:${v.telefon.replace(/\s/g, '')}`} className="inline-flex items-center gap-1.5 hover:text-white"><Phone className="h-3.5 w-3.5" />{v.telefon}</a>}
           </div>
           <div className="flex items-center gap-4">
             {v.facebook && <a href={v.facebook} target="_blank" rel="noopener" aria-label="Facebook" className="hover:text-white"><Facebook className="h-4 w-4" /></a>}
@@ -164,17 +165,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-4">
           <div className="md:col-span-1">
             <div className="flex items-center gap-3"><Wappen verein={v} groesse={48} /><span className="text-lg font-extrabold text-white">{v.kurzname}</span></div>
-            <p className="mt-4 text-sm leading-relaxed text-slate-400">{v.slogan} Seit {v.gruendung} in {v.ort}.</p>
+            <p className="mt-4 text-sm leading-relaxed text-slate-400">{v.slogan} {v.gruendung ? `Seit ${v.gruendung} in ${v.ort}.` : `Sport für alle Generationen in ${v.ort}.`}</p>
           </div>
           <div>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Kontakt</h3>
             <p className="flex gap-2 text-sm"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-akzent" />{v.name}<br />{v.strasse}<br />{v.plz} {v.ort}</p>
-            <p className="mt-2 text-sm"><a href={`mailto:${v.email}`} className="hover:text-white">{v.email}</a><br /><a href={`tel:${v.telefon.replace(/\s/g, '')}`} className="hover:text-white">{v.telefon}</a></p>
+            <p className="mt-2 text-sm"><a href={`mailto:${v.email}`} className="hover:text-white">{v.email}</a>{v.telefon && <><br /><a href={`tel:${v.telefon.replace(/\s/g, '')}`} className="hover:text-white">{v.telefon}</a></>}</p>
           </div>
           <div>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Schnellzugriff</h3>
             <ul className="space-y-1.5 text-sm">
-              {[['Spielplan', '/spielbetrieb/spielplan'], ['Trainingszeiten', '/verein/trainingszeiten'], ['Termine', '/veranstaltungen'], ['Downloads', '/downloads'], ['Mitglied werden', '/mitglied-werden']].map(([t, z]) => <li key={z}><Link to={z} className="hover:text-white">{t}</Link></li>)}
+              {[['Spielplan', '/spielbetrieb/spielplan'], ['Trainingszeiten', '/verein/trainingszeiten'], ['Termine', '/veranstaltungen'], ['Downloads', '/downloads'], ['Gästebuch', '/gaestebuch'], ['Besucherstatistik', '/besucherstatistik'], ['Mitglied werden', '/mitglied-werden']].map(([t, z]) => <li key={z}><Link to={z} className="hover:text-white">{t}</Link></li>)}
             </ul>
           </div>
           <div>

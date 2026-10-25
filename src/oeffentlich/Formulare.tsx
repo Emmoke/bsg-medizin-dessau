@@ -196,7 +196,7 @@ export function Kontakt() {
             <div className="rounded-3xl bg-primaer p-6 text-white">
               <h2 className="text-lg font-bold">{v.name}</h2>
               <p className="mt-2 text-white/85">{v.strasse}<br />{v.plz} {v.ort}</p>
-              <p className="mt-3"><a href={`mailto:${v.email}`} className="font-semibold">{v.email}</a><br /><a href={`tel:${v.telefon.replace(/\s/g, '')}`}>{v.telefon}</a></p>
+              <p className="mt-3"><a href={`mailto:${v.email}`} className="font-semibold">{v.email}</a>{v.telefon && <><br /><a href={`tel:${v.telefon.replace(/\s/g, '')}`}>{v.telefon}</a></>}</p>
             </div>
             <div className="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
               <h2 className="mb-3 font-bold">Ansprechpartner</h2>

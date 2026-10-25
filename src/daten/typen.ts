@@ -37,9 +37,24 @@ export interface Verein {
   kontaktEmpfaenger: string[];
   antragAktiv: boolean;
   kontaktAktiv: boolean;
+  /** Großes Foto im Kopfbereich der Startseite (wie das Rasenfoto der alten Seite) */
+  titelbild?: string;
+  /** Untertitel unter dem Vereinsnamen, z. B. "Abteilung Fußball" */
+  untertitel?: string;
+  vereinsheim?: Vereinsheim;
+  links?: Verweis[];
+  gaestebuchAktiv?: boolean;
 }
 
-export type Kategorie = 'Herren' | 'Frauen' | 'Jugend' | 'Senioren' | 'Freizeit';
+export interface Vereinsheim { name: string; text: string; oeffnungszeiten: string; telefon?: string; angebot?: string; bild?: string }
+export interface Verweis { id: string; titel: string; url: string; kategorie: string; beschreibung?: string }
+/** Gegner-Datenbank: Vereine aus der Umgebung mit Logo und ihren Mannschaften je Sportart und Altersklasse */
+export interface GegnerMannschaft { id: string; zusatz: string; sportart: string; kategorie: Kategorie }
+export interface Gegnerverein { id: string; name: string; ort?: string; logo?: string; farbe: string; webseite?: string; mannschaften: GegnerMannschaft[] }
+
+export interface Gaestebucheintrag { id: string; datum: string; name: string; ort?: string; text: string; status: 'neu' | 'freigegeben'; antwort?: string }
+
+export type Kategorie = 'Erwachsene' | 'Herren' | 'Frauen' | 'Jugend' | 'Senioren' | 'Freizeit';
 export interface Trainingszeit { tag: string; von: string; bis: string; ort: string }
 
 export interface Mannschaft {
@@ -213,6 +228,8 @@ export interface Datenbestand {
   trainings: Training[];
   antraege: Antrag[];
   anfragen: Anfrage[];
+  gaestebuch: Gaestebucheintrag[];
+  gegner: Gegnerverein[];
   protokoll: Protokolleintrag[];
   /** Seitenaufrufe je Tag: { "2026-10-25": 12 } */
   aufrufe: Record<string, number>;

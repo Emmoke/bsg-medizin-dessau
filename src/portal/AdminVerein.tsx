@@ -153,8 +153,8 @@ export function MannschaftenVerwaltung({ d }: SeitenProps) {
   };
   return (
     <>
-      <Kopf titel="Mannschaftsverwaltung" beschreibung="Teams anlegen, Trainer zuordnen, Trainingszeiten und Ansprechpartner pflegen."
-        aktionen={<Knopf art="primaer" onClick={() => setOffen({ id: '', name: '', kurz: '', sportart: 'Fußball', kategorie: 'Herren', trainerIds: [], betreuer: [], trainingszeiten: [], reihenfolge: liste.length + 1 })}><Plus className="h-4 w-4" />Mannschaft</Knopf>} />
+      <Kopf titel="Abteilungen & Mannschaften" beschreibung="Neue Sportarten, Kurse und Teams jederzeit anlegen – jede Sportart ist möglich. Trainer zuordnen, Trainingszeiten und Ansprechpartner pflegen."
+        aktionen={<Knopf art="primaer" onClick={() => setOffen({ id: '', name: '', kurz: '', sportart: 'Fußball', kategorie: 'Herren', trainerIds: [], betreuer: [], trainingszeiten: [], reihenfolge: liste.length + 1 })}><Plus className="h-4 w-4" />Neue Abteilung / Aktivität</Knopf>} />
       <Karte innen={false}>
         <ul className="divide-y divide-slate-100">{liste.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center gap-4 px-5 py-3">
@@ -175,8 +175,8 @@ export function MannschaftenVerwaltung({ d }: SeitenProps) {
             <Feld label="Kürzel"><Eingabe value={offen.kurz} maxLength={3} onChange={(e) => setOffen({ ...offen, kurz: e.target.value })} placeholder="D" /></Feld>
             <Feld label="Name in Spielpaarungen" hinweis={`leer = „${d.verein.spielName}“`}><Eingabe value={offen.spielName ?? ''} onChange={(e) => setOffen({ ...offen, spielName: e.target.value || undefined })} /></Feld>
             <Feld label="Sportart"><Eingabe value={offen.sportart} onChange={(e) => setOffen({ ...offen, sportart: e.target.value })} list="sportarten" /></Feld>
-            <datalist id="sportarten">{['Fußball', 'Volleyball', 'Handball', 'Basketball', 'Tischtennis', 'Leichtathletik', 'Gesundheitssport', 'Gymnastik', 'Tanz', ...new Set(d.mannschaften.map((m) => m.sportart))].map((s) => <option key={s} value={s} />)}</datalist>
-            <Feld label="Bereich"><Auswahl value={offen.kategorie} onChange={(e) => setOffen({ ...offen, kategorie: e.target.value as Kategorie })} optionen={['Herren', 'Frauen', 'Jugend', 'Senioren', 'Freizeit']} /></Feld>
+            <datalist id="sportarten">{['Fußball', 'Badminton', 'Sportschießen', 'Zumba', 'Feldenkrais', 'Volleyball', 'Handball', 'Basketball', 'Tischtennis', 'Tennis', 'Leichtathletik', 'Schwimmen', 'Karate', 'Judo', 'Yoga', 'Pilates', 'Step-Aerobic', 'Piloxing', 'Rehasport', 'Gesundheitssport', 'Gymnastik', 'Tanz', 'Radsport', 'Laufen', 'Nordic Walking', 'Kegeln', 'Schach', 'Darts', ...new Set(d.mannschaften.map((m) => m.sportart))].map((s) => <option key={s} value={s} />)}</datalist>
+            <Feld label="Bereich"><Auswahl value={offen.kategorie} onChange={(e) => setOffen({ ...offen, kategorie: e.target.value as Kategorie })} optionen={['Erwachsene', 'Herren', 'Frauen', 'Jugend', 'Senioren', 'Freizeit']} /></Feld>
             <Feld label="Liga / Staffel"><Eingabe value={offen.liga ?? ''} onChange={(e) => setOffen({ ...offen, liga: e.target.value || undefined })} /></Feld>
             <Feld label="Beschreibung" className="sm:col-span-2"><Textbereich rows={3} value={offen.beschreibung ?? ''} onChange={(e) => setOffen({ ...offen, beschreibung: e.target.value })} /></Feld>
             <Feld label="Reihenfolge"><Eingabe type="number" value={offen.reihenfolge} onChange={(e) => setOffen({ ...offen, reihenfolge: Number(e.target.value) })} /></Feld>

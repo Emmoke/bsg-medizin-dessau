@@ -24,6 +24,11 @@ export function SpielEditor({ spiel, d, b, onClose }: { spiel: Spiel; d: Datenbe
   const m = d.mannschaften.find((x) => x.id === s.mannschaftId);
   const neu = !d.spiele.some((x) => x.id === s.id);
   const tore = s.ereignisse.filter((e) => e.typ === 'tor').length;
+  // Gegner-Vorschläge: Mannschaften der Vereine aus der Umgebung mit gleicher Sportart und Altersklasse, dazu bisherige Gegner
+  const gegnerVorschlaege = [...new Set([
+    ...d.gegner.flatMap((g) => g.mannschaften.filter((gm) => gm.sportart === m?.sportart && (gm.kategorie === m?.kategorie || !m)).map((gm) => (g.name + ' ' + gm.zusatz).trim())),
+    ...d.spiele.filter((x) => x.mannschaftId === s.mannschaftId).map((x) => x.gegner),
+  ])];
 
   const speichern = () => {
     if (!s.gegner.trim()) { setReiter('ansetzung'); return hinweis('Bitte den Gegner angeben', 'fehler'); }
@@ -53,7 +58,8 @@ export function SpielEditor({ spiel, d, b, onClose }: { spiel: Spiel; d: Datenbe
       {reiter === 'ansetzung' && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Feld label="Gegner *"><Eingabe value={s.gegner} onChange={(e) => setze('gegner', e.target.value)} list="gegnerliste" /></Feld>
-          <datalist id="gegnerliste">{[...new Set(d.spiele.map((x) => x.gegner))].map((g) => <option key={g} value={g} />)}</datalist>
+          <datalist id="gegnerliste">{gegnerVorschlaege.map((g) => <option key={g} value={g} />)}</datalist>
+          <p className="-mt-2 text-xs text-slate-500 sm:col-span-2">Vorschläge aus der Gegner-Datenbank passend zu {m?.sportart} · {m?.kategorie} – neue Vereine und Logos unter Verwaltung → Gegner & Vereine.</p>
           <Feld label="Anstoß"><Eingabe type="datetime-local" value={s.datum} onChange={(e) => setze('datum', e.target.value)} /></Feld>
           <Feld label="Wettbewerb"><Eingabe value={s.wettbewerb} onChange={(e) => setze('wettbewerb', e.target.value)} list="wettbewerbe" /></Feld>
           <datalist id="wettbewerbe">{['Liga', 'Kreispokal', 'Freundschaftsspiel', 'Testspiel', 'Turnier', 'Fairplay-Liga', ...new Set(d.spiele.map((x) => x.wettbewerb))].map((g) => <option key={g} value={g} />)}</datalist>

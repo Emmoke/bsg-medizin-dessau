@@ -1,12 +1,11 @@
-// Beispieldaten für den ersten Start (Demo). Alle Namen, Gegner, Ergebnisse und Sponsoren sind ausgedacht und
-// werden im Adminbereich ersetzt. Termine und Spiele liegen relativ zum heutigen Tag, damit die Demo immer aktuell wirkt.
-import type {
-  Album, Benutzer, Datenbestand, Mannschaft, Mitglied, News, Spiel, Spielereignis, Spieler, Tabelle, Tabellenzeile, Training, Verein,
-} from './typen';
+// Startdaten der BSG Medizin Dessau e.V. – Vereinsangaben, Abteilungen, Trainingszeiten, Ansprechpartner, Sportstätten,
+// Beiträge, Dokumente und Bilder stammen von bsg-medizin.de (Freigabe durch den Verein).
+// Ausgedacht und als Beispiel gekennzeichnet sind nur Demo-Inhalte für die Verwaltung: Personen in Kader/Mitgliederliste,
+// Badminton-Freundschaftsspiele, Trainingseinheiten, Anträge und Anfragen. Diese im Admin ersetzen bzw. löschen.
+import type { Album, Benutzer, Datenbestand, Gegnerverein, Mannschaft, Mitglied, News, Spiel, Spielereignis, Spieler, Tabellenzeile, Training, Verein } from './typen';
+import { bilanz, sortiereTabelle } from './auswertung';
 import { STANDARD_RECHTE } from './rechte';
 import { passwortHash } from './sha256';
-import { platzhalter, initialenLogo } from './bilder';
-import { sortiereTabelle, bilanz } from './auswertung';
 
 /** Reproduzierbarer Zufall, damit die Demo bei jedem Start gleich aussieht */
 function zufall(startwert: number) {
@@ -23,23 +22,21 @@ function zeitpunkt(tage: number, uhr = '15:00'): string {
 /** Nächster Wochentag (0 = So … 6 = Sa) ab heute + versatz Wochen */
 function wochentag(tag: number, wochen: number, uhr: string): string {
   const d = new Date();
-  const bis = (tag - d.getDay() + 7) % 7;
-  return zeitpunkt(bis + wochen * 7, uhr);
+  return zeitpunkt((tag - d.getDay() + 7) % 7 + wochen * 7, uhr);
 }
 
-const BLAU = '#1f7a33', DUNKEL = '#0c3b18', GOLD = '#e3001b';
+const BASIS = import.meta.env?.BASE_URL ?? '/';
+const bild = (datei: string) => `${BASIS}bsg/${datei}`;
 
-const VORNAMEN = ['Lukas', 'Max', 'Paul', 'Felix', 'Jonas', 'Leon', 'Tim', 'Niklas', 'Tom', 'Erik', 'Moritz', 'Ben', 'Philipp', 'Florian', 'Kevin',
-  'Marcel', 'Dennis', 'Sebastian', 'Tobias', 'Robert', 'Steffen', 'Martin'];
-const KINDER = ['Adam', 'Anton', 'Bruno', 'Fabian', 'Hannes', 'Lennox', 'Mattheo', 'Oliver', 'Emil', 'Karl', 'Theo', 'Noah', 'Mats', 'Luis', 'Finn'];
-const FRAUEN = ['Lena', 'Sophie', 'Marie', 'Laura', 'Anna', 'Lisa', 'Julia', 'Hannah', 'Lea', 'Emma', 'Clara', 'Nele', 'Mia', 'Sarah', 'Jana'];
+const VORNAMEN = ['Lukas', 'Anja', 'Paul', 'Katrin', 'Jonas', 'Sabine', 'Tim', 'Nicole', 'Thomas', 'Petra', 'Moritz', 'Jana', 'Frank', 'Ines', 'Kevin', 'Heike', 'Dirk', 'Claudia'];
+const JUGEND = ['Leon', 'Mia', 'Finn', 'Lea', 'Noah', 'Emma', 'Ben', 'Lina'];
 const NACHNAMEN = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann', 'Koch', 'Richter', 'Klein',
-  'Wolf', 'Neumann', 'Schwarz', 'Krüger', 'Hartmann', 'Lange', 'Werner', 'Krause', 'Lehmann', 'Köhler', 'Seidel'];
-const GEGNER = ['FSV Elbaue', 'SG Kühnau', 'Grün-Weiß Mildensee', 'TSV Roßlau-Ost', 'SV Waldersee', 'Eintracht Ziebigk', 'VfB Törten', 'SG Kochstedt',
-  'Blau-Weiß Alten', 'FC Mosigkau', 'SF Haideburg', 'SV Großkühnau', 'Union Mildensee'];
+  'Wolf', 'Neumann', 'Schwarz', 'Krüger', 'Hartmann', 'Lange', 'Werner', 'Krause', 'Lehmann'];
+/** Beispiel-Gegner für die Badminton-Demo (ausgedacht) */
+const BADMINTON_GEGNER = ['BC Muldeaue (Beispiel)', 'SG Federball Roßlau (Beispiel)', 'TSV Badminton Köthen (Beispiel)', 'Post SV Bitterfeld (Beispiel)'];
 
 export function beispielDaten(): Datenbestand {
-  const r = zufall(1997);
+  const r = zufall(2017);
   const wahl = <T,>(liste: T[]) => liste[Math.floor(r() * liste.length)];
   let zaehler = 0;
   const id = (p: string) => `${p}${(++zaehler).toString(36)}`;
@@ -47,302 +44,313 @@ export function beispielDaten(): Datenbestand {
   const verein: Verein = {
     name: 'BSG Medizin Dessau e.V.',
     kurzname: 'BSG Medizin',
-    spielName: 'BSG Medizin',
-    gruendung: '1950',
-    slogan: 'Sport. Gemeinschaft. Gesundheit.',
-    ueberUns: 'Die BSG Medizin Dessau ist ein familiärer Sportverein mitten in Dessau-Roßlau. Vom Bambini-Fußball über die Herren bis zum Gesundheitssport finden hier alle Generationen ihren Platz. (Beispieltext – im Adminbereich unter „Verein“ anpassen.)',
-    farbePrimaer: BLAU,
-    farbeAkzent: GOLD,
-    logo: `${import.meta.env?.BASE_URL ?? '/'}wappen.png`,
-    strasse: 'Sportplatzweg 1', plz: '06844', ort: 'Dessau-Roßlau',
-    email: 'info@bsg-medizin-dessau.de', telefon: '0340 000000',
-    facebook: 'https://www.facebook.com/', instagram: 'https://www.instagram.com/',
+    spielName: 'BSG Medizin Dessau',
+    gruendung: '',
+    slogan: 'Sei mutig – mach mit!',
+    untertitel: 'Badminton · Feldenkrais · Sportschießen · Zumba®',
+    ueberUns: 'In der Sportlandschaft von Dessau-Roßlau ist die BSG Medizin noch ein relativ junger Verein. Derzeit trainieren Mitglieder in den verschiedenen Sportarten, vorrangig Freizeitsport. Der Spaß an der Bewegung steht im Vordergrund. Im Januar 2017 erhielten wir als erster Verein in Dessau-Roßlau das Gütesiegel „Familienfreundlicher Sportverein“.\n\nIn der Kinder- und Jugendarbeit sind wir in der Sportart Sportschießen sehr erfolgreich. Dort können wir Erfolge vom Deutschen Meister bis zum Vizeeuropameister aufweisen. Die Darstellung der ideellen Werte des Vereins, wie Gemeinschaft, Geselligkeit, soziales Engagement sind uns wichtig. Wir wollen ein Ort der Begegnung, der Kommunikation und der sozialen Integration sein. Der Verein möchte seinen Mitgliedern deshalb nicht nur eine sportliche, sondern vor allem auch eine „soziale Heimat“ bieten.\n\nUnsere Aufgabe ist es, ein vielseitiges Sportangebot für alle Altersgruppen zu präsentieren, das stets auf seine Aktualität überprüft, hohen qualitativen Ansprüchen gerecht wird und an den individuellen Bedürfnissen ausgerichtet ist.\n\n**Sei mutig – mach mit!**',
+    farbePrimaer: '#1f7a33',
+    farbeAkzent: '#e3001b',
+    logo: `${BASIS}wappen.png`,
+    titelbild: bild('zumba.png'),
+    strasse: 'Große Schaftrift 5', plz: '06847', ort: 'Dessau-Roßlau',
+    email: 'bsg.medizin.dessau.ev@gmail.com', telefon: '',
+    facebook: 'https://www.facebook.com/BSGMEDIZIN/',
     sportstaetten: [
-      { id: 'st1', name: 'Sportplatz Medizin – Platz 1 (Rasen)', adresse: 'Sportplatzweg 1, 06844 Dessau-Roßlau', hinweis: 'Parkplätze am Vereinsheim, Fahrräder bitte am Zaun abstellen.' },
-      { id: 'st2', name: 'Sportplatz Medizin – Platz 2 (Kunstrasen)', adresse: 'Sportplatzweg 1, 06844 Dessau-Roßlau' },
-      { id: 'st3', name: 'Turnhalle Nord', adresse: 'Schulstraße 5, 06844 Dessau-Roßlau', hinweis: 'Nur Hallenschuhe mit heller Sohle.' },
+      { id: 'st1', name: 'Sport- und Therapiehalle der Alexianer', adresse: 'St. Joseph-Krankenhaus Dessau, Auenweg 36, 06847 Dessau-Roßlau', hinweis: 'Seit Juni 2017 nutzen wir die Halle mit – Kooperationsvertrag mit der Alexianer Sachsen-Anhalt GmbH.' },
+      { id: 'st2', name: 'Schulsporthalle Grundschule „Zoberberg“', adresse: 'Kastanienhof 14, 06847 Dessau-Roßlau', hinweis: 'Seit 2016. In den Sommerferien Zumba draußen auf dem Sportplatz Schaftrift.' },
+      { id: 'st3', name: 'Schießstand Roßlau (SAR)', adresse: 'Dessau-Roßlau, OT Roßlau', hinweis: 'Training der Abteilung Sportschießen, Distanzen 25 bis 300 m.' },
     ],
     vorstand: [
-      { id: 'v1', name: 'Andreas Beispiel', amt: '1. Vorsitzender', email: 'vorstand@bsg-medizin-dessau.de' },
-      { id: 'v2', name: 'Kathrin Muster', amt: '2. Vorsitzende' },
-      { id: 'v3', name: 'Thomas Rechner', amt: 'Schatzmeister', email: 'kasse@bsg-medizin-dessau.de' },
-      { id: 'v4', name: 'Sandra Jung', amt: 'Jugendleiterin', email: 'jugend@bsg-medizin-dessau.de' },
-      { id: 'v5', name: 'Mike Platzwart', amt: 'Sportlicher Leiter' },
+      { id: 'v1', name: 'Sipan Khalil', amt: '1. Vorsitzender', email: 'bsg.medizin.dessau.ev@gmail.com' },
+      { id: 'v2', name: 'derzeit unbesetzt', amt: '2. Vorsitzende/r' },
+      { id: 'v3', name: 'Huner Khalil', amt: 'Schatzmeister' },
     ],
     chronik: [
-      { id: 'c1', jahr: '1950', titel: 'Gründung', text: 'Gründung als Betriebssportgemeinschaft der Dessauer Medizin-Einrichtungen. (Beispiel – bitte mit der echten Vereinsgeschichte ersetzen.)' },
-      { id: 'c2', jahr: '1972', titel: 'Erster Aufstieg', text: 'Die erste Männermannschaft steigt in die Bezirksklasse auf.' },
-      { id: 'c3', jahr: '1990', titel: 'Neugründung als e.V.', text: 'Nach der Wende wird die BSG als eingetragener Verein weitergeführt.' },
-      { id: 'c4', jahr: '2012', titel: 'Kunstrasenplatz', text: 'Mit Hilfe von Sponsoren und vielen freiwilligen Stunden entsteht Platz 2.' },
-      { id: 'c5', jahr: '2026', titel: 'Neues Vereinsportal', text: 'Webseite, Mitgliederbereich und Vereinsverwaltung in einem System.' },
+      { id: 'c1', jahr: '2016', titel: 'Halle Zoberberg', text: 'Seit 2016 nutzen wir die Schulsporthalle der Grundschule Zoberberg.' },
+      { id: 'c2', jahr: '2017', titel: 'Familienfreundlicher Sportverein', text: 'Im Januar 2017 erhielt die BSG Medizin als erster Verein in Dessau-Roßlau das Gütesiegel „Familienfreundlicher Sportverein“.' },
+      { id: 'c3', jahr: '2017', titel: 'Kooperation mit den Alexianern', text: 'Seit Juni 2017 können wir die Sport- und Therapiehalle der Alexianer GmbH am St. Joseph-Krankenhaus mitnutzen.' },
+      { id: 'c4', jahr: '2018', titel: 'Neue Beitragsordnung', text: 'Die Mitgliederversammlung beschließt am 09.03.2018 die neue Beitragsordnung (gültig ab 01.01.2018).' },
+      { id: 'c5', jahr: '2026', titel: 'Neuer Vorstand', text: 'Ab 19.02.2026: Sipan Khalil (1. Vorsitzender) und Huner Khalil (Schatzmeister). Mitgliederversammlung am 24. Juli 2026.' },
+      { id: 'c6', jahr: '2026', titel: 'Neues Vereinsportal', text: 'Webseite, Mitgliederbereich und Vereinsverwaltung in einem System.' },
     ],
-    satzung: '§ 1 Name, Sitz, Geschäftsjahr\nDer Verein führt den Namen „BSG Medizin Dessau e.V.“ und hat seinen Sitz in Dessau-Roßlau. Geschäftsjahr ist das Kalenderjahr.\n\n§ 2 Zweck des Vereins\nZweck des Vereins ist die Förderung des Sports. Der Satzungszweck wird verwirklicht insbesondere durch die Durchführung von Trainings- und Wettkampfbetrieb sowie Gesundheitssport.\n\n§ 3 Gemeinnützigkeit\nDer Verein verfolgt ausschließlich und unmittelbar gemeinnützige Zwecke im Sinne der Abgabenordnung.\n\n§ 4 Mitgliedschaft\nMitglied kann jede natürliche Person werden. Über den schriftlichen Aufnahmeantrag entscheidet der Vorstand.\n\n§ 5 Beiträge\nDie Höhe der Beiträge regelt die Beitragsordnung, die von der Mitgliederversammlung beschlossen wird.\n\n(Mustertext – bitte durch die gültige Satzung ersetzen.)',
+    satzung: 'Die gültige Vereinssatzung (Änderung 2015) steht unter „Downloads“ als PDF bereit.\n\n§ Zweck des Vereins\nDie BSG Medizin Dessau e.V. fördert den Sport – vorrangig Freizeit- und Gesundheitssport – für alle Altersgruppen sowie Gemeinschaft, Geselligkeit und soziale Integration.\n\n(Kurzfassung – maßgeblich ist das PDF der Satzung.)',
     beitraege: [
-      { id: 'b1', name: 'Erwachsene', betrag: 12, intervall: 'monatlich' },
-      { id: 'b2', name: 'Kinder und Jugendliche', betrag: 8, intervall: 'monatlich' },
-      { id: 'b3', name: 'Familien', betrag: 25, intervall: 'monatlich' },
-      { id: 'b4', name: 'Fördermitglied (passiv)', betrag: 36, intervall: 'jährlich' },
+      { id: 'b1', name: 'Einzelmitglied Erwachsene (Betrieb)', betrag: 11, intervall: 'monatlich' },
+      { id: 'b2', name: 'Einzelmitglied Kinder u. Jugendliche', betrag: 7, intervall: 'monatlich' },
+      { id: 'b3', name: 'Einzelmitglied Senioren (Betrieb)', betrag: 9, intervall: 'monatlich' },
+      { id: 'b4', name: 'Familienmitgliedschaft (Betrieb)', betrag: 15, intervall: 'monatlich' },
+      { id: 'b5', name: 'Familienmitgliedschaft Senioren (Betrieb)', betrag: 13, intervall: 'monatlich' },
+      { id: 'b6', name: 'Einzelmitglied Erwachsene (betriebsfremd)', betrag: 15, intervall: 'monatlich' },
+      { id: 'b7', name: 'Einzelmitglied Senioren (betriebsfremd)', betrag: 13, intervall: 'monatlich' },
+      { id: 'b8', name: 'Familienmitgliedschaft (betriebsfremd)', betrag: 24, intervall: 'monatlich' },
+      { id: 'b9', name: 'Familienmitgliedschaft Senioren (betriebsfremd)', betrag: 22, intervall: 'monatlich' },
     ],
-    impressum: 'Angaben gemäß § 5 DDG\n\nBSG Medizin Dessau e.V.\nSportplatzweg 1\n06844 Dessau-Roßlau\n\nVertreten durch den Vorstand: [Name 1. Vorsitzende/r]\nRegistergericht: Amtsgericht Stendal, Registernummer: [VR …]\n\nKontakt: info@bsg-medizin-dessau.de\n\nVerantwortlich für den Inhalt nach § 18 Abs. 2 MStV: [Name, Anschrift]\n\n(Platzhalter – bitte vor Veröffentlichung vollständig ausfüllen.)',
-    datenschutz: 'Verantwortlicher: BSG Medizin Dessau e.V., Sportplatzweg 1, 06844 Dessau-Roßlau.\n\nDiese Webseite setzt keine Tracking-Cookies und keine Analysewerkzeuge Dritter ein. Seitenaufrufe werden nur als anonyme Tageszahl gezählt.\n\nFormulare (Kontakt, Mitgliedsantrag): Die Angaben werden ausschließlich zur Bearbeitung Ihrer Anfrage bzw. zur Mitgliederverwaltung verwendet (Art. 6 Abs. 1 lit. b DSGVO) und nicht an Dritte weitergegeben, außer an Sportverbände, soweit für den Spielbetrieb erforderlich (z. B. Spielerpass).\n\nFotos: Bilder von Mitgliedern werden nur mit Einwilligung veröffentlicht (Art. 6 Abs. 1 lit. a DSGVO), die jederzeit widerrufen werden kann.\n\nIhre Rechte: Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie Beschwerde bei der Aufsichtsbehörde (Landesbeauftragter für den Datenschutz Sachsen-Anhalt).\n\n(Mustertext – bitte rechtlich prüfen lassen.)',
+    impressum: 'Angaben gemäß § 5 DDG\n\nBSG Medizin Dessau e.V.\nGroße Schaftrift 5\n06847 Dessau-Roßlau\n\nVertreten durch:\nSipan Khalil (Vorsitzender)\nHuner Khalil (Schatzmeister)\n\nKontakt: bsg.medizin.dessau.ev@gmail.com\n\nRegistereintrag: Vereinsregister, Registergericht Amtsgericht Stendal, Registernummer VR 2657\n\nWir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.',
+    datenschutz: 'Verantwortlicher: BSG Medizin Dessau e.V., Große Schaftrift 5, 06847 Dessau-Roßlau, bsg.medizin.dessau.ev@gmail.com.\n\nDiese Webseite setzt keine Tracking-Cookies und keine Analysewerkzeuge Dritter ein. Seitenaufrufe werden nur als anonyme Tageszahl gezählt.\n\nFormulare (Kontakt, Mitgliedsantrag, Gästebuch): Die Angaben werden ausschließlich zur Bearbeitung Ihres Anliegens bzw. zur Mitgliederverwaltung verwendet (Art. 6 Abs. 1 lit. b DSGVO) und nicht an Dritte weitergegeben, außer an Sportverbände, soweit für den Sportbetrieb erforderlich.\n\nFotos: Bilder von Mitgliedern werden nur mit Einwilligung (Formular „Fotoerlaubnis“) veröffentlicht (Art. 6 Abs. 1 lit. a DSGVO); die Einwilligung kann jederzeit widerrufen werden.\n\nIhre Rechte: Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie Beschwerde bei der Aufsichtsbehörde (Landesbeauftragter für den Datenschutz Sachsen-Anhalt).\n\n(Bitte vor Veröffentlichung rechtlich prüfen lassen.)',
     saison: '2026/27',
     namenKuerzen: true,
     rechte: STANDARD_RECHTE,
-    kontaktEmpfaenger: ['Vorstand', 'Jugendabteilung', 'Sponsoring', 'Webseite'],
+    kontaktEmpfaenger: ['Vorstand', 'Badminton', 'Feldenkrais', 'Sportschießen', 'Zumba'],
     antragAktiv: true,
     kontaktAktiv: true,
+    gaestebuchAktiv: true,
+    links: [
+      { id: 'l1', titel: 'Bund Deutscher Sportschützen (BDS)', url: 'https://www.bdsnet.de', kategorie: 'Verbände', beschreibung: 'Unser Verband im Sportschießen' },
+      { id: 'l2', titel: 'Landessportbund Sachsen-Anhalt', url: 'https://www.lsb-sachsen-anhalt.de', kategorie: 'Verbände' },
+      { id: 'l3', titel: 'Stadt Dessau-Roßlau', url: 'https://www.dessau-rosslau.de', kategorie: 'Stadt & Partner' },
+      { id: 'l4', titel: 'Alexianer Sachsen-Anhalt', url: 'https://www.alexianer.de', kategorie: 'Stadt & Partner', beschreibung: 'Kooperationspartner – Sport- und Therapiehalle am St. Joseph-Krankenhaus' },
+      { id: 'l5', titel: 'BSG Medizin auf Facebook', url: 'https://www.facebook.com/BSGMEDIZIN/', kategorie: 'BSG Medizin' },
+      { id: 'l6', titel: 'Zumba®', url: 'https://www.zumba.com/de-DE', kategorie: 'Sportarten' },
+      { id: 'l7', titel: 'Feldenkrais-Verband Deutschland', url: 'https://www.feldenkrais.de', kategorie: 'Sportarten' },
+    ],
   };
 
-  // ---- Benutzer (Demo-Zugänge) ----
+  // ---- Abteilungen / Gruppen (Angaben von bsg-medizin.de) ----
+  const k = (name: string, amt: string) => ({ id: id('k'), name, amt });
+  const alex = 'Sporthalle der Alexianer', zob = 'Sporthalle Grundschule Zoberberg', sar = 'Schießstand Roßlau (SAR)';
+  const mannschaften: Mannschaft[] = [
+    { id: 'badminton', name: 'Badminton', kurz: 'BA', sportart: 'Badminton', kategorie: 'Erwachsene', trainerIds: ['u-trainer'], reihenfolge: 1,
+      betreuer: [k('S. Siegel', 'Ansprechpartner')], trainingszeiten: [{ tag: 'Dienstag', von: '19:00', bis: '21:00', ort: alex }],
+      beschreibung: 'Badminton für Einsteiger und Fortgeschrittene in der Halle der Alexianer – Spaß am Spiel steht im Vordergrund. Schnuppern ist jederzeit zu den Trainingszeiten möglich.' },
+    { id: 'feldenkrais', name: 'Feldenkrais', kurz: 'FK', sportart: 'Feldenkrais', kategorie: 'Freizeit', trainerIds: [], reihenfolge: 2,
+      betreuer: [k('Christine Freitag', 'Ansprechpartnerin')], trainingszeiten: [{ tag: 'Mittwoch', von: '19:30', bis: '21:00', ort: alex }],
+      beschreibung: 'Bewusstheit durch Bewegung: sanfte Übungen für mehr Beweglichkeit, Haltung und Wohlbefinden – für jedes Alter geeignet.' },
+    { id: 'sportschiessen', name: 'Sportschießen', kurz: 'SG', sportart: 'Sportschießen', kategorie: 'Erwachsene', trainerIds: ['u-trainer'], reihenfolge: 3, bild: bild('sportschiessen.png'),
+      betreuer: [k('Jörg Bauer', 'Ansprechpartner'), k('Hartmut Friedrich', 'Ansprechpartner')], trainingszeiten: [{ tag: 'Freitag', von: '16:00', bis: '20:00', ort: sar }],
+      beschreibung: 'Präzision. Disziplin. Gemeinschaft. Mitglied im Bund Deutscher Sportschützen (BDS): Training auf Distanzen zwischen 25 und 300 Metern mit Kurz- und Langwaffen, Klein- und Großkaliber. Unsere Mitglieder nehmen regelmäßig und erfolgreich an Landes- und Deutschen Meisterschaften teil. Unterstützung beim Erwerb der Sachkundeprüfung nach dem Waffengesetz.' },
+    { id: 'sportschiessen-jugend', name: 'Sportschießen Jugend (ab 14)', kurz: 'SJ', sportart: 'Sportschießen', kategorie: 'Jugend', trainerIds: [], reihenfolge: 4,
+      betreuer: [k('Jörg Bauer', 'Schießleiter'), k('Hartmut Friedrich', 'Schießleiter')], trainingszeiten: [{ tag: 'Freitag', von: '16:00', bis: '20:00', ort: sar }],
+      beschreibung: 'Nachwuchsförderung ist uns wichtig: Jugendliche ab 14 Jahren trainieren mit Kleinkaliberwaffen – betreut von speziell für die Jugendarbeit befähigten Schießleitern für eine sichere Ausbildung. Erfolge vom Deutschen Meister bis zum Vizeeuropameister.' },
+    { id: 'zumba', name: 'Zumba®', kurz: 'ZU', sportart: 'Zumba', kategorie: 'Freizeit', trainerIds: [], reihenfolge: 5, bild: bild('zumba.png'),
+      betreuer: [k('Peggy König', 'Trainerin')], trainingszeiten: [{ tag: 'Dienstag', von: '18:00', bis: '19:00', ort: alex }, { tag: 'Donnerstag', von: '18:15', bis: '19:30', ort: zob }],
+      beschreibung: 'Zumba®, Zumba Step® und Zumba Strong®: Tanz-Fitness zu mitreißender Musik. In den Sommerferien trainieren wir donnerstags draußen auf dem Sportplatz Schaftrift.' },
+  ];
+
+  // ---- Abteilung Fußball (neu im Aufbau – Mannschaften nach dem Vorbild Dessauer SV 97; Spieler/Ergebnisse sind Beispiele) ----
+  const fz = (tag: string, von: string, bis: string) => ({ tag, von, bis, ort: 'Sportplatz Schaftrift' });
+  const fussball: Mannschaft[] = [
+    { id: 'herren-1', name: '1. Herren', kurz: '1H', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisoberliga Anhalt', trainerIds: ['u-trainer'], betreuer: [k('Tom Trainer', 'Trainer')], trainingszeiten: [fz('Dienstag', '18:30', '20:00'), fz('Donnerstag', '18:30', '20:00')], reihenfolge: 10, beschreibung: 'Unsere neue Fußballabteilung – Spieler jeden Alters sind willkommen. (Beispieldaten)' },
+    { id: 'herren-2', name: '2. Herren', kurz: '2H', spielName: 'BSG Medizin Dessau II', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisliga Nord', trainerIds: [], betreuer: [k('N. N.', 'Trainer')], trainingszeiten: [fz('Mittwoch', '18:30', '20:00')], reihenfolge: 11 },
+    { id: 'alte-herren', name: 'Alte Herren Ü35', kurz: 'AH', spielName: 'BSG Medizin Dessau AH', sportart: 'Fußball', kategorie: 'Senioren', liga: 'Freundschaftsspiele', trainerIds: [], betreuer: [k('N. N.', 'Ansprechpartner')], trainingszeiten: [fz('Freitag', '18:00', '19:30')], reihenfolge: 12 },
+    { id: 'frauen', name: 'Frauen', kurz: 'F', sportart: 'Fußball', kategorie: 'Frauen', liga: 'Landesklasse Frauen', trainerIds: [], betreuer: [k('N. N.', 'Trainerin')], trainingszeiten: [fz('Montag', '18:00', '19:30')], reihenfolge: 13 },
+    { id: 'e-jugend', name: 'E-Junioren (U11)', kurz: 'E', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Kreisliga Staffel 1', trainerIds: [], betreuer: [k('N. N.', 'Trainer')], trainingszeiten: [fz('Dienstag', '16:30', '18:00')], reihenfolge: 14 },
+    { id: 'f-jugend', name: 'F-Junioren (U9)', kurz: 'F', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Fairplay-Liga', trainerIds: ['u-trainer'], betreuer: [k('Tom Trainer', 'Trainer')], trainingszeiten: [fz('Mittwoch', '16:30', '18:00')], reihenfolge: 15 },
+    { id: 'bambini', name: 'Bambini (U7)', kurz: 'G', sportart: 'Fußball', kategorie: 'Jugend', trainerIds: [], betreuer: [k('N. N.', 'Trainer/in')], trainingszeiten: [{ tag: 'Samstag', von: '10:00', bis: '11:00', ort: 'Sportplatz Schaftrift' }], reihenfolge: 16 },
+  ];
+  mannschaften.push(...fussball);
+
+  // ---- Benutzer (Demo-Zugänge – vor dem Livegang ändern) ----
   const benutzer: Benutzer[] = [
     ['u-admin', 'Anna', 'Admin', 'admin@verein.de', 'admin', [], 'admin123'],
-    ['u-vorstand', 'Andreas', 'Beispiel', 'vorstand@verein.de', 'vorstand', [], 'vorstand123'],
-    ['u-trainer', 'Tom', 'Trainer', 'trainer@verein.de', 'trainer', ['herren-1', 'f-jugend'], 'trainer123'],
+    ['u-vorstand', 'Vera', 'Vorstand', 'vorstand@verein.de', 'vorstand', [], 'vorstand123'],
+    ['u-trainer', 'Tom', 'Trainer', 'trainer@verein.de', 'trainer', ['badminton', 'sportschiessen', 'herren-1', 'f-jugend'], 'trainer123'],
     ['u-redaktion', 'Rita', 'Redaktion', 'redaktion@verein.de', 'redakteur', [], 'redaktion123'],
-    ['u-mitglied', 'Max', 'Mitglied', 'mitglied@verein.de', 'mitglied', ['herren-1'], 'mitglied123'],
+    ['u-mitglied', 'Max', 'Mitglied', 'mitglied@verein.de', 'mitglied', ['badminton'], 'mitglied123'],
   ].map(([bid, vorname, nachname, email, rolle, mannschaftIds, pw]) => ({
     id: bid as string, vorname: vorname as string, nachname: nachname as string, email: email as string, rolle: rolle as Benutzer['rolle'],
     mannschaftIds: mannschaftIds as string[], passwortHash: passwortHash(email as string, pw as string), aktiv: true,
   }));
 
-  // ---- Mannschaften ----
-  const tz = (tag: string, von: string, bis: string, ort = 'Platz 2 (Kunstrasen)') => ({ tag, von, bis, ort });
-  const person = (name: string, amt: string) => ({ id: id('k'), name, amt });
-  const mannschaften: Mannschaft[] = [
-    { id: 'herren-1', name: '1. Herren', kurz: '1H', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisoberliga Anhalt', trainerIds: ['u-trainer'],
-      betreuer: [person('Tom Trainer', 'Cheftrainer'), person('Rico Co', 'Co-Trainer')], trainingszeiten: [tz('Dienstag', '18:30', '20:00'), tz('Donnerstag', '18:30', '20:00')], reihenfolge: 1,
-      beschreibung: 'Unser Aushängeschild – ambitioniert, jung und mit vielen Spielern aus der eigenen Jugend.' },
-    { id: 'herren-2', name: '2. Herren', kurz: '2H', spielName: 'BSG Medizin II', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisliga Nord', trainerIds: [],
-      betreuer: [person('Jens Zweite', 'Trainer')], trainingszeiten: [tz('Mittwoch', '18:30', '20:00')], reihenfolge: 2 },
-    { id: 'alte-herren', name: 'Alte Herren Ü35', kurz: 'AH', spielName: 'BSG Medizin AH', sportart: 'Fußball', kategorie: 'Senioren', liga: 'Freundschaftsspiele', trainerIds: [],
-      betreuer: [person('Uwe Routinier', 'Ansprechpartner')], trainingszeiten: [tz('Freitag', '18:00', '19:30')], reihenfolge: 3 },
-    { id: 'frauen', name: 'Frauen', kurz: 'F', sportart: 'Fußball', kategorie: 'Frauen', liga: 'Landesklasse Frauen Staffel 3', trainerIds: [],
-      betreuer: [person('Nadine Stark', 'Trainerin')], trainingszeiten: [tz('Montag', '18:00', '19:30'), tz('Mittwoch', '18:00', '19:30')], reihenfolge: 4 },
-    { id: 'c-jugend', name: 'C-Junioren (U15)', kurz: 'C', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Kreisliga', trainerIds: [],
-      betreuer: [person('Daniel Nachwuchs', 'Trainer')], trainingszeiten: [tz('Montag', '17:00', '18:30'), tz('Donnerstag', '17:00', '18:30')], reihenfolge: 5 },
-    { id: 'e-jugend', name: 'E-Junioren (U11)', kurz: 'E', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Kreisliga Staffel 1', trainerIds: [],
-      betreuer: [person('Oliver Herbst', 'Trainer')], trainingszeiten: [tz('Dienstag', '16:30', '18:00'), tz('Freitag', '16:30', '18:00')], reihenfolge: 6 },
-    { id: 'f-jugend', name: 'F-Junioren (U9)', kurz: 'F', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Fairplay-Liga Nord', trainerIds: ['u-trainer'],
-      betreuer: [person('Tom Trainer', 'Trainer'), person('Lisa Eltern', 'Betreuerin')], trainingszeiten: [tz('Mittwoch', '16:30', '18:00')], reihenfolge: 7,
-      beschreibung: 'In der Fairplay-Liga zählt der Spaß: ohne Schiedsrichter, ohne Tabelle, die Eltern stehen hinter der Bande.' },
-    { id: 'bambini', name: 'Bambini (U7)', kurz: 'G', sportart: 'Fußball', kategorie: 'Jugend', trainerIds: [],
-      betreuer: [person('Sandra Jung', 'Trainerin')], trainingszeiten: [tz('Samstag', '10:00', '11:00')], reihenfolge: 8 },
-    { id: 'volleyball', name: 'Volleyball Mixed', kurz: 'VB', sportart: 'Volleyball', kategorie: 'Freizeit', trainerIds: [],
-      betreuer: [person('Petra Netz', 'Übungsleiterin')], trainingszeiten: [tz('Donnerstag', '19:30', '21:30', 'Turnhalle Nord')], reihenfolge: 9 },
-    { id: 'gesundheitssport', name: 'Reha- & Gesundheitssport', kurz: 'GS', sportart: 'Gesundheitssport', kategorie: 'Senioren', trainerIds: [],
-      betreuer: [person('Dr. Claudia Herz', 'Übungsleiterin (Reha)')], trainingszeiten: [tz('Montag', '10:00', '11:00', 'Turnhalle Nord'), tz('Mittwoch', '10:00', '11:00', 'Turnhalle Nord')], reihenfolge: 10,
-      beschreibung: 'Ärztlich verordneter Rehasport und Präventionskurse – die BSG-Wurzeln in der Medizin.' },
-  ];
-
-  // ---- Spieler ----
+  // ---- Beispiel-Teilnehmer (ausgedacht, öffentlich nur abgekürzt) ----
   const spieler: Spieler[] = [];
-  const kader = (mid: string, anzahl: number, namen: string[], jahr: [number, number], fussball = true) => {
+  const gruppe = (mid: string, anzahl: number, namen: string[], jahr: [number, number]) => {
     const benutzt = new Set<string>();
     for (let i = 0; i < anzahl; i++) {
       let vor = wahl(namen), nach = wahl(NACHNAMEN);
       while (benutzt.has(vor + nach)) { vor = wahl(namen); nach = wahl(NACHNAMEN); }
       benutzt.add(vor + nach);
-      const pos: Spieler['position'] = !fussball ? 'Spieler' : i === 0 ? 'Tor' : i < 6 ? 'Abwehr' : i < 11 ? 'Mittelfeld' : 'Sturm';
-      spieler.push({ id: id('s'), mannschaftId: mid, vorname: vor, nachname: nach, nummer: i === 0 ? 1 : i + 2, position: pos,
-        geburtsjahr: jahr[0] + Math.floor(r() * (jahr[1] - jahr[0] + 1)), aktiv: true });
+      spieler.push({ id: id('s'), mannschaftId: mid, vorname: vor, nachname: nach, nummer: i + 1, position: 'Spieler', geburtsjahr: jahr[0] + Math.floor(r() * (jahr[1] - jahr[0] + 1)), aktiv: true });
     }
   };
-  kader('herren-1', 18, VORNAMEN, [1992, 2006]);
-  kader('herren-2', 14, VORNAMEN, [1985, 2006]);
-  kader('frauen', 15, FRAUEN, [1990, 2008]);
-  kader('e-jugend', 11, KINDER, [2016, 2017]);
-  kader('f-jugend', 11, KINDER, [2018, 2019]);
-  const demoSpieler = spieler.find((p) => p.mannschaftId === 'herren-1' && p.position === 'Mittelfeld')!;
-  demoSpieler.vorname = 'Max'; demoSpieler.nachname = 'Mitglied';
-  benutzer.find((b) => b.id === 'u-mitglied')!.spielerId = demoSpieler.id;
+  gruppe('badminton', 10, VORNAMEN, [1970, 2004]);
+  gruppe('sportschiessen', 8, VORNAMEN, [1960, 2000]);
+  gruppe('sportschiessen-jugend', 5, JUGEND, [2008, 2012]);
+  gruppe('zumba', 9, VORNAMEN, [1965, 2003]);
+  gruppe('feldenkrais', 6, VORNAMEN, [1950, 1990]);
+  const demo = spieler.find((p) => p.mannschaftId === 'badminton')!;
+  demo.vorname = 'Max'; demo.nachname = 'Mitglied';
+  benutzer.find((b) => b.id === 'u-mitglied')!.spielerId = demo.id;
 
-  // ---- Spiele ----
+  // ---- Beispiel-Spiele: Badminton-Freundschaftsspiele (ausgedacht, zeigen die Spielbetriebs-Funktionen) ----
   const spiele: Spiel[] = [];
   const saison = verein.saison;
-  const spielplan = (mid: string, wettbewerb: string, wochenZurueck: number, wochenVor: number, tag: number, uhr: string, ohneErgebnis = false) => {
-    const kaderM = spieler.filter((p) => p.mannschaftId === mid);
-    const gegner = [...GEGNER].sort(() => r() - 0.5);
-    for (let w = -wochenZurueck; w <= wochenVor; w++) {
+  const kaderB = spieler.filter((p) => p.mannschaftId === 'badminton');
+  [-6, -4, -2, 1, 3].forEach((w, i) => {
+    const vergangen = w < 0;
+    const heimspiel = i % 2 === 0;
+    const s: Spiel = { id: id('g'), mannschaftId: 'badminton', saison, datum: wochentag(6, w, '10:00'), wettbewerb: 'Freundschaftsspiel (Beispiel)', spieltag: `${i + 1}. Begegnung`,
+      heimspiel, gegner: BADMINTON_GEGNER[i % BADMINTON_GEGNER.length], ort: heimspiel ? alex : undefined, status: vergangen ? 'beendet' : 'geplant', aufstellung: [], ereignisse: [], zusagen: {},
+      treffpunkt: vergangen ? undefined : '09:30 Uhr in der Halle' };
+    if (vergangen) {
+      const aufstellung = [...kaderB].sort(() => r() - 0.5).slice(0, 6);
+      s.aufstellung = aufstellung.map((p) => p.id);
+      // Mannschaftsspiel: 8 Einzel/Doppel, Ergebnis = gewonnene Spiele
+      s.toreWir = 3 + Math.floor(r() * 4); s.toreGegner = 8 - s.toreWir;
+      const ereignisse: Spielereignis[] = [];
+      for (let t = 0; t < s.toreWir; t++) ereignisse.push({ id: id('e'), typ: 'tor', spielerId: wahl(aufstellung).id });
+      s.ereignisse = ereignisse;
+    } else for (const p of kaderB) { const x = r(); s.zusagen[p.id] = x > 0.3 ? 'ja' : x > 0.15 ? 'vielleicht' : 'nein'; }
+    spiele.push(s);
+  });
+  // ---- Fußball: Spielpläne wie beim DSV 97 (Liga, Spieltag, Torschützen, Karten; F-Jugend als Fairplay-Liga ohne Ergebnis) ----
+  const FUSS_NAMEN = ['Lukas', 'Max', 'Paul', 'Felix', 'Jonas', 'Leon', 'Tim', 'Niklas', 'Tom', 'Erik', 'Moritz', 'Ben', 'Philipp', 'Florian', 'Kevin', 'Marcel', 'Dennis', 'Robert'];
+  const KINDER = ['Adam', 'Anton', 'Bruno', 'Fabian', 'Hannes', 'Lennox', 'Mattheo', 'Oliver', 'Emil', 'Karl', 'Theo', 'Mats'];
+  const FRAUEN = ['Lena', 'Sophie', 'Marie', 'Laura', 'Anna', 'Lisa', 'Julia', 'Hannah', 'Lea', 'Emma', 'Clara', 'Nele', 'Sarah', 'Jana'];
+  const kaderFuss = (mid: string, anzahl: number, namen: string[], jahr: [number, number]) => {
+    gruppe(mid, anzahl, namen, jahr);
+    spieler.filter((p) => p.mannschaftId === mid).forEach((p, i) => { p.position = i === 0 ? 'Tor' : i < 6 ? 'Abwehr' : i < 11 ? 'Mittelfeld' : 'Sturm'; p.nummer = i === 0 ? 1 : i + 2; });
+  };
+  kaderFuss('herren-1', 16, FUSS_NAMEN, [1992, 2006]);
+  kaderFuss('frauen', 14, FRAUEN, [1990, 2008]);
+  kaderFuss('e-jugend', 10, KINDER, [2016, 2017]);
+  kaderFuss('f-jugend', 10, KINDER, [2018, 2019]);
+  const FUSS_GEGNER = ['FSV Elbaue (Beispiel)', 'SG Kühnau (Beispiel)', 'Grün-Weiß Mildensee (Beispiel)', 'SV Waldersee (Beispiel)', 'Eintracht Ziebigk (Beispiel)', 'VfB Törten (Beispiel)', 'SG Kochstedt (Beispiel)', 'FC Mosigkau (Beispiel)'];
+  const spielplan = (mid: string, wettbewerb: string, zurueck: number, vor: number, tag: number, uhr: string, ohneErgebnis = false) => {
+    const kader = spieler.filter((p) => p.mannschaftId === mid);
+    for (let w = -zurueck; w <= vor; w++) {
       if (w === 0) continue;
-      const nr = w + wochenZurueck + (w > 0 ? 0 : 1);
-      const vergangen = w < 0;
-      const heimspiel = nr % 2 === 1;
-      const s: Spiel = {
-        id: id('g'), mannschaftId: mid, saison, datum: wochentag(tag, w > 0 ? w - 1 : w, uhr), wettbewerb, spieltag: `${nr}. Spieltag`, heimspiel,
-        gegner: gegner[(nr - 1) % gegner.length], ort: heimspiel ? 'Sportplatz Medizin – Platz 1' : undefined,
-        status: vergangen ? (ohneErgebnis ? 'ohneErgebnis' : 'beendet') : 'geplant', aufstellung: [], ereignisse: [], zusagen: {},
-        treffpunkt: !vergangen ? (heimspiel ? `${String(Number(uhr.slice(0, 2)) - 1).padStart(2, '0')}:00 Uhr Kabine` : `${String(Number(uhr.slice(0, 2)) - 2).padStart(2, '0')}:00 Uhr Parkplatz Vereinsheim`) : undefined,
-      };
-      if (vergangen && kaderM.length) {
-        const aufstellung = [...kaderM].sort(() => r() - 0.5).slice(0, Math.min(kaderM.length, ohneErgebnis ? 11 : 14));
-        s.aufstellung = aufstellung.map((p) => p.id);
-        const toreWir = Math.floor(r() * 4.2), toreGegner = Math.floor(r() * 3.2);
-        const ereignisse: Spielereignis[] = [];
-        const feldspieler = aufstellung.filter((p) => p.position !== 'Tor');
-        for (let t = 0; t < toreWir; t++) {
-          const schuetze = wahl(feldspieler);
-          ereignisse.push({ id: id('e'), typ: 'tor', spielerId: schuetze.id, minute: ohneErgebnis ? undefined : 5 + Math.floor(r() * 85) });
-          if (!ohneErgebnis && r() > 0.35) {
-            const vorlage = wahl(feldspieler.filter((p) => p.id !== schuetze.id));
-            if (vorlage) ereignisse.push({ id: id('e'), typ: 'vorlage', spielerId: vorlage.id });
-          }
+      const nr = w + zurueck + (w > 0 ? 0 : 1), vergangen = w < 0, heimspiel = nr % 2 === 1;
+      const s: Spiel = { id: id('g'), mannschaftId: mid, saison, datum: wochentag(tag, w > 0 ? w - 1 : w, uhr), wettbewerb, spieltag: `${nr}. Spieltag`, heimspiel,
+        gegner: FUSS_GEGNER[(nr - 1) % FUSS_GEGNER.length], ort: heimspiel ? 'Sportplatz Schaftrift' : undefined, status: vergangen ? (ohneErgebnis ? 'ohneErgebnis' : 'beendet') : 'geplant',
+        aufstellung: [], ereignisse: [], zusagen: {}, treffpunkt: vergangen ? undefined : 'eine Stunde vor Anstoß am Platz' };
+      if (vergangen && kader.length) {
+        const auf = [...kader].sort(() => r() - 0.5).slice(0, Math.min(kader.length, 11));
+        s.aufstellung = auf.map((p) => p.id);
+        const tore = Math.floor(r() * 4.2), feld = auf.filter((p) => p.position !== 'Tor');
+        for (let t = 0; t < tore; t++) {
+          const sch = wahl(feld);
+          s.ereignisse.push({ id: id('e'), typ: 'tor', spielerId: sch.id, minute: ohneErgebnis ? undefined : 5 + Math.floor(r() * 85) });
+          if (!ohneErgebnis && r() > 0.4) s.ereignisse.push({ id: id('e'), typ: 'vorlage', spielerId: wahl(feld.filter((p) => p.id !== sch.id)).id });
         }
         if (!ohneErgebnis) {
-          if (r() > 0.4) ereignisse.push({ id: id('e'), typ: 'gelb', spielerId: wahl(feldspieler).id, minute: 20 + Math.floor(r() * 70) });
-          if (r() > 0.92) ereignisse.push({ id: id('e'), typ: 'rot', spielerId: wahl(feldspieler).id, minute: 60 + Math.floor(r() * 30) });
-          s.toreWir = toreWir; s.toreGegner = toreGegner;
+          if (r() > 0.5) s.ereignisse.push({ id: id('e'), typ: 'gelb', spielerId: wahl(feld).id, minute: 30 + Math.floor(r() * 60) });
+          s.toreWir = tore; s.toreGegner = Math.floor(r() * 3.2);
         }
-        s.ereignisse = ereignisse.sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0));
+        s.ereignisse.sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0));
       }
-      if (!vergangen) for (const p of kaderM) { const x = r(); if (w === 1) s.zusagen[p.id] = x > 0.25 ? 'ja' : x > 0.12 ? 'vielleicht' : 'nein'; }
+      if (w === 1) for (const p of kader) { const x = r(); s.zusagen[p.id] = x > 0.25 ? 'ja' : x > 0.12 ? 'vielleicht' : 'nein'; }
       spiele.push(s);
     }
   };
-  spielplan('herren-1', 'Kreisoberliga', 9, 4, 6, '14:00');
-  spielplan('herren-2', 'Kreisliga Nord', 8, 3, 6, '11:30');
-  spielplan('frauen', 'Landesklasse', 7, 3, 0, '13:00');
-  spielplan('e-jugend', 'Kreisliga', 6, 3, 6, '10:00');
-  spielplan('f-jugend', 'Fairplay-Liga', 6, 3, 5, '17:00', true);
-  spiele.push({ id: id('g'), mannschaftId: 'alte-herren', saison, datum: wochentag(5, 1, '18:30'), wettbewerb: 'Freundschaftsspiel', heimspiel: false,
-    gegner: 'Eintracht Ziebigk AH', status: 'geplant', aufstellung: [], ereignisse: [], zusagen: {} });
-  spiele.push({ id: id('g'), mannschaftId: 'c-jugend', saison, datum: wochentag(0, 1, '10:30'), wettbewerb: 'Kreispokal', spieltag: 'Achtelfinale', heimspiel: true,
-    gegner: 'SG Kochstedt', ort: 'Sportplatz Medizin – Platz 2', status: 'geplant', aufstellung: [], ereignisse: [], zusagen: {} });
-  // Spiele aus Vorsaisons für den direkten Vergleich (wie auf der alten Seite)
-  const h1 = spiele.filter((s) => s.mannschaftId === 'herren-1');
-  for (const alt of h1) {
-    for (const jahre of [1, 2]) {
-      const d = new Date(); d.setFullYear(d.getFullYear() - jahre); d.setDate(d.getDate() - Math.floor(r() * 60));
-      const z = (n: number) => String(n).padStart(2, '0');
-      spiele.push({ id: id('g'), mannschaftId: 'herren-1', saison: `${d.getFullYear() - 1}/${String(d.getFullYear()).slice(2)}`,
-        datum: `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T14:00`, wettbewerb: 'Kreisoberliga', heimspiel: jahre === 1 ? !alt.heimspiel : alt.heimspiel,
-        gegner: alt.gegner, status: 'beendet', toreWir: Math.floor(r() * 4), toreGegner: Math.floor(r() * 3), aufstellung: [], ereignisse: [], zusagen: {} });
-    }
-  }
+  spielplan('herren-1', 'Kreisoberliga', 6, 3, 6, '14:00');
+  spielplan('frauen', 'Landesklasse', 5, 2, 0, '13:00');
+  spielplan('e-jugend', 'Kreisliga', 4, 2, 6, '10:00');
+  spielplan('f-jugend', 'Fairplay-Liga', 4, 2, 5, '17:00', true);
+  spiele.push({ id: id('g'), mannschaftId: 'alte-herren', saison, datum: wochentag(5, 0, '18:30'), wettbewerb: 'Freundschaftsspiel', heimspiel: false, gegner: 'Dessauer SV 97 AH', status: 'geplant', aufstellung: [], ereignisse: [], zusagen: {} });
 
-  // ---- Tabellen (eigene Zeile aus den erfassten Ergebnissen, Rest ausgedacht) ----
-  const tabelle = (mid: string, liga: string, teams: number): Tabelle => {
-    const eigene = bilanz(spiele.filter((s) => s.mannschaftId === mid && s.saison === saison));
+  const tabelle = (mid: string, liga: string, teams: number) => {
+    const b = bilanz(spiele.filter((s) => s.mannschaftId === mid && s.saison === saison));
     const m = mannschaften.find((x) => x.id === mid)!;
-    const zeilen: Tabellenzeile[] = [{ id: 'wir', platz: 0, verein: m.spielName ?? verein.spielName, spiele: eigene.spiele, s: eigene.s, u: eigene.u, n: eigene.n,
-      tore: eigene.tore, gegentore: eigene.gegentore, punkte: eigene.s * 3 + eigene.u, wir: true }];
-    for (const name of GEGNER.slice(0, teams - 1)) {
-      const sp = eigene.spiele + (r() > 0.7 ? 1 : 0) - (r() > 0.8 ? 1 : 0);
-      const s = Math.floor(r() * (sp + 1)), u = Math.floor(r() * (sp - s + 1)), n = sp - s - u;
-      const tore = s * 2 + u + Math.floor(r() * 8), gegentore = n * 2 + u + Math.floor(r() * 8);
-      zeilen.push({ id: id('t'), platz: 0, verein: name, spiele: sp, s, u, n, tore, gegentore, punkte: s * 3 + u });
+    const zeilen: Tabellenzeile[] = [{ id: 'wir', platz: 0, verein: m.spielName ?? verein.spielName, spiele: b.spiele, s: b.s, u: b.u, n: b.n, tore: b.tore, gegentore: b.gegentore, punkte: b.s * 3 + b.u, wir: true }];
+    for (const name of FUSS_GEGNER.slice(0, teams - 1)) {
+      const sp = b.spiele, s = Math.floor(r() * (sp + 1)), u = Math.floor(r() * (sp - s + 1)), n = sp - s - u;
+      zeilen.push({ id: id('t'), platz: 0, verein: name, spiele: sp, s, u, n, tore: s * 2 + u + Math.floor(r() * 6), gegentore: n * 2 + u + Math.floor(r() * 6), punkte: s * 3 + u });
     }
     return { id: `tab-${mid}`, mannschaftId: mid, liga, stand: zeitpunkt(-1).slice(0, 10), zeilen: sortiereTabelle(zeilen) };
   };
-  const tabellen = [tabelle('herren-1', 'Kreisoberliga Anhalt', 14), tabelle('herren-2', 'Kreisliga Nord', 12), tabelle('frauen', 'Landesklasse Frauen Staffel 3', 10), tabelle('e-jugend', 'Kreisliga Staffel 1', 8)];
+  const tabellen = [tabelle('herren-1', 'Kreisoberliga Anhalt (Beispiel)', 8), tabelle('frauen', 'Landesklasse Frauen (Beispiel)', 6), tabelle('e-jugend', 'Kreisliga Staffel 1 (Beispiel)', 6)];
 
-  // ---- News ----
-  const letztesH1 = h1.filter((s) => s.status === 'beendet').sort((a, b) => b.datum.localeCompare(a.datum))[0];
+  // eine Begegnung aus der Vorsaison fürs Archiv
+  const vorjahr = new Date(); vorjahr.setFullYear(vorjahr.getFullYear() - 1);
+  spiele.push({ id: id('g'), mannschaftId: 'badminton', saison: '2025/26', datum: `${vorjahr.getFullYear()}-11-15T10:00`, wettbewerb: 'Freundschaftsspiel (Beispiel)', heimspiel: false,
+    gegner: BADMINTON_GEGNER[0], status: 'beendet', toreWir: 5, toreGegner: 3, aufstellung: [], ereignisse: [], zusagen: {} });
+
+  // ---- News (echte Meldungen von bsg-medizin.de) ----
   const news: News[] = [
-    { id: 'n1', titel: letztesH1 ? `${letztesH1.toreWir}:${letztesH1.toreGegner} gegen ${letztesH1.gegner} – Spielbericht der 1. Herren` : 'Spielbericht 1. Herren',
-      anriss: 'Bei bestem Herbstwetter lieferten sich beide Mannschaften ein intensives Duell. Unser Trainer war nach dem Abpfiff zufrieden mit Einsatz und Moral.',
-      text: 'Bei bestem Herbstwetter lieferten sich beide Mannschaften ein intensives Duell. Von Beginn an übernahm unsere Elf die Kontrolle und erspielte sich gute Möglichkeiten.\n\nNach der Pause wurde die Partie offener, doch die Abwehr stand sicher. „Mit dem Einsatz bin ich sehr zufrieden“, sagte der Trainer nach dem Abpfiff.\n\n(Beispielbericht – Trainer können Berichte direkt im Trainerbereich beim Spiel schreiben.)',
-      datum: letztesH1?.datum.slice(0, 10) ?? zeitpunkt(-2).slice(0, 10), autor: 'Tom Trainer', kategorie: 'Spielbericht', mannschaftId: 'herren-1', spielId: letztesH1?.id,
-      status: 'veroeffentlicht', bild: platzhalter('jubel', BLAU, DUNKEL) },
-    { id: 'n2', titel: 'E-Junioren beim Herbstcup auf dem Treppchen', anriss: 'Platz drei unter zwölf Mannschaften – unsere U11 zeigte beim Herbstcup tollen Fußball und viel Teamgeist.',
-      text: 'Platz drei unter zwölf Mannschaften – unsere U11 zeigte beim Herbstcup tollen Fußball und viel Teamgeist. Nach der Vorrunde ungeschlagen ging es erst im Halbfinale knapp verloren.\n\nDanke an alle Eltern für die Fahrdienste!',
-      datum: zeitpunkt(-4).slice(0, 10), autor: 'Oliver Herbst', kategorie: 'Jugend', mannschaftId: 'e-jugend', status: 'veroeffentlicht', bild: platzhalter('pokal', '#0f766e', '#064e3b') },
-    { id: 'n3', titel: 'Einladung zur Mitgliederversammlung', anriss: 'Alle Mitglieder sind herzlich zur ordentlichen Mitgliederversammlung im Vereinsheim eingeladen. Tagesordnung im Mitgliederbereich.',
-      text: 'Alle Mitglieder sind herzlich zur ordentlichen Mitgliederversammlung im Vereinsheim eingeladen.\n\nTagesordnung:\n1. Begrüßung\n2. Bericht des Vorstands\n3. Kassenbericht\n4. Entlastung\n5. Wahlen\n6. Verschiedenes\n\nAnträge bitte bis eine Woche vorher schriftlich beim Vorstand einreichen.',
-      datum: zeitpunkt(-6).slice(0, 10), autor: 'Andreas Beispiel', kategorie: 'Verein', status: 'veroeffentlicht', angeheftet: true, bild: platzhalter('halle', '#334155', '#0f172a') },
-    { id: 'n4', titel: 'Neuer Hauptsponsor: Apotheke am Stadtpark', anriss: 'Wir freuen uns über die neue Partnerschaft – passend zu unseren Wurzeln in der Medizin.',
-      text: 'Wir freuen uns über die neue Partnerschaft – passend zu unseren Wurzeln in der Medizin. Die Apotheke am Stadtpark unterstützt ab sofort den Jugend- und Gesundheitssport.\n\n(Beispielsponsor)',
-      datum: zeitpunkt(-10).slice(0, 10), autor: 'Andreas Beispiel', kategorie: 'Sponsoren', status: 'veroeffentlicht', bild: platzhalter('ball', GOLD, '#b45309') },
-    { id: 'n5', titel: 'Parken am Sportplatz – bitte beachten', anriss: 'An Spieltagen wird es eng. Bitte nutzt den Parkplatz am Vereinsheim und haltet die Feuerwehrzufahrt frei.',
-      text: 'An Spieltagen wird es eng. Bitte nutzt den Parkplatz am Vereinsheim und haltet die Feuerwehrzufahrt frei. Wer kann, kommt mit dem Fahrrad – Stellplätze gibt es am Zaun.',
-      datum: zeitpunkt(-12).slice(0, 10), autor: 'Mike Platzwart', kategorie: 'Verein', status: 'veroeffentlicht', bild: platzhalter('feld', '#15803d', '#14532d') },
-    { id: 'n6', titel: 'Rehasport: neue Kurse ab November', anriss: 'Zusätzlicher Kurs mittwochs – Anmeldung mit ärztlicher Verordnung bei Dr. Claudia Herz.',
-      text: 'Zusätzlicher Kurs mittwochs in der Turnhalle Nord. Anmeldung mit ärztlicher Verordnung bei unserer Übungsleiterin.',
-      datum: zeitpunkt(-15).slice(0, 10), autor: 'Rita Redaktion', kategorie: 'Verein', mannschaftId: 'gesundheitssport', status: 'veroeffentlicht', bild: platzhalter('halle', '#be123c', '#7f1d1d') },
-    { id: 'n7', titel: 'Entwurf: Weihnachtsfeier-Planung', anriss: 'Noch nicht veröffentlicht.', text: 'Ideen sammeln…', datum: zeitpunkt(0).slice(0, 10), autor: 'Rita Redaktion', kategorie: 'Veranstaltung', status: 'entwurf' },
+    { id: 'n1', titel: 'Wichtiger Hinweis zur Erreichbarkeit', anriss: 'Unsere Kommunikation erfolgt ab sofort ausschließlich per E-Mail. Telefonisch ist die BSG nicht mehr erreichbar.',
+      text: 'Liebe Mitglieder und Interessierte,\n\nbitte beachten Sie, dass unsere Kommunikation ab sofort ausschließlich per E-Mail erfolgt. Telefonisch ist die BSG nicht mehr erreichbar.\n\nFür alle Anliegen, Fragen oder Informationen nutzen Sie bitte unsere E-Mail-Adresse: **bsg.medizin.dessau.ev@gmail.com**\n\nWir werden uns schnellstmöglich um Ihr Anliegen kümmern.\n\nVielen Dank für Ihr Verständnis\n\nMit freundlichen Grüßen\nIhre BSG',
+      datum: zeitpunkt(-3).slice(0, 10), autor: 'Vorstand', kategorie: 'Verein', status: 'veroeffentlicht', angeheftet: true, bild: bild('step.png') },
+    { id: 'n2', titel: 'Mitgliederversammlung am 24. Juli 2026', anriss: 'Die Mitgliederversammlung hat am 24. Juli 2026 stattgefunden. Der Vorstand ist im Vereinsregister beim Amtsgericht Stendal gemeldet.',
+      text: 'Am 24. Juli 2026 fand unsere Mitgliederversammlung statt.\n\nVorstand:\n- 1. Vorsitzender: Sipan Khalil\n- Schatzmeister: Huner Khalil\n- 2. Vorsitzende/r: derzeit unbesetzt\n\nWer sich im Vorstand engagieren möchte, meldet sich gern per E-Mail.',
+      datum: '2026-07-25', autor: 'Vorstand', kategorie: 'Verein', status: 'veroeffentlicht', bild: bild('karate.png') },
+    { id: 'n3', titel: 'Sportschießen: Präzision. Disziplin. Gemeinschaft.', anriss: 'Du suchst eine spannende Herausforderung, bei der Konzentration, Körperbeherrschung und Präzision gefragt sind? Dann bist du bei uns genau richtig!',
+      text: 'Du suchst eine spannende Herausforderung, bei der Konzentration, Körperbeherrschung und Präzision gefragt sind? Dann bist du bei uns genau richtig!\n\nUnser Verein ist Mitglied im Bund Deutscher Sportschützen (BDS) und bietet ein vielfältiges Training auf Distanzen zwischen 25 und 300 Metern. Ob Kurzwaffen oder Langwaffen, Klein- oder Großkaliber – bei uns kannst du dich in einer Vielzahl von Disziplinen ausprobieren und weiterentwickeln.\n\nUnsere Mitglieder nehmen regelmäßig und erfolgreich an Wettkämpfen teil, darunter Landesmeisterschaften und Deutsche Meisterschaften.\n\n**Nachwuchsförderung ist uns wichtig!** Jugendliche ab 14 Jahren können bei uns mit Kleinkaliberwaffen trainieren. Dafür stehen speziell für die Jugendarbeit befähigte Schießleiter zur Verfügung.\n\nWer sich intensiver beschäftigen möchte, dem bieten wir Unterstützung beim Erwerb der Sachkundeprüfung nach dem Waffengesetz.\n\nTraining: freitags 16:00–20:00 Uhr auf dem Schießstand Roßlau (SAR). Ansprechpartner: Jörg Bauer, Hartmut Friedrich.',
+      datum: zeitpunkt(-20).slice(0, 10), autor: 'Abteilung Sportschießen', kategorie: 'Verein', mannschaftId: 'sportschiessen', status: 'veroeffentlicht', bild: bild('sportschiessen.png') },
+    { id: 'n4', titel: 'Neuer Hallenbelegungsplan', anriss: 'Der aktuelle Hallenbelegungsplan (Stand November 2025) steht zum Download bereit. Änderungen vorbehalten.',
+      text: 'Hier findet ihr den aktuellen Hallenbelegungsplan (A4 Hochformat) unter „Downloads“. Änderungen vorbehalten.', datum: '2025-11-01', autor: 'Vorstand', kategorie: 'Verein', status: 'veroeffentlicht', bild: bild('piloxing.png') },
+    { id: 'n5', titel: 'Neuer Vorstand ab 19. Februar 2026', anriss: 'Sipan Khalil übernimmt den Vorsitz, Huner Khalil wird Schatzmeister. Die Eintragung erfolgt über das Notariat beim Amtsgericht Stendal.',
+      text: 'Ab 19.02.2026 führt ein neuer Vorstand die BSG Medizin Dessau:\n\n- 1. Vorsitzender: Sipan Khalil\n- Schatzmeister: Huner Khalil\n\nDie Beantragung erfolgte über das Notariat, die Meldung an das zuständige Amtsgericht Stendal.',
+      datum: '2026-02-19', autor: 'Vorstand', kategorie: 'Verein', status: 'veroeffentlicht', bild: bild('zumba.png') },
+    { id: 'n6', titel: 'Gütesiegel „Familienfreundlicher Sportverein“', anriss: 'Als erster Verein in Dessau-Roßlau erhielt die BSG Medizin im Januar 2017 das Gütesiegel „Familienfreundlicher Sportverein“.',
+      text: 'Im Januar 2017 erhielten wir als erster Verein in Dessau-Roßlau das Gütesiegel „Familienfreundlicher Sportverein“. Darauf sind wir stolz – und es ist uns Ansporn, ein vielseitiges Sportangebot für alle Altersgruppen zu bieten.', datum: '2017-01-20', autor: 'Vorstand', kategorie: 'Verein', status: 'veroeffentlicht', bild: bild('step.png') },
   ];
 
   const termine = [
-    { id: 'tm1', titel: 'Arbeitseinsatz am Sportplatz', beginn: wochentag(6, 1, '09:00'), ende: wochentag(6, 1, '13:00'), ort: 'Sportplatz Medizin', kategorie: 'Verein' as const, oeffentlich: true, beschreibung: 'Laub, Netze, Kabinen – viele Hände, schnelles Ende. Für Essen und Getränke ist gesorgt.' },
-    { id: 'tm2', titel: 'Ordentliche Mitgliederversammlung', beginn: zeitpunkt(20, '19:00'), ende: zeitpunkt(20, '21:30'), ort: 'Vereinsheim', kategorie: 'Versammlung' as const, oeffentlich: true, beschreibung: 'Tagesordnung im Mitgliederbereich.' },
-    { id: 'tm3', titel: 'Vorstandssitzung', beginn: zeitpunkt(9, '19:30'), ort: 'Vereinsheim', kategorie: 'Versammlung' as const, oeffentlich: false },
-    { id: 'tm4', titel: 'Weihnachtsfeier für alle Mitglieder', beginn: zeitpunkt(50, '17:00'), ende: zeitpunkt(50, '23:00'), ort: 'Vereinsheim', kategorie: 'Fest' as const, oeffentlich: true, beschreibung: 'Mit Tombola und Ehrungen.' },
-    { id: 'tm5', titel: 'Hallenturnier der Junioren', beginn: zeitpunkt(72, '09:00'), ende: zeitpunkt(72, '17:00'), ort: 'Turnhalle Nord', kategorie: 'Turnier' as const, oeffentlich: true },
-    { id: 'tm6', titel: 'Trainerstammtisch', beginn: zeitpunkt(14, '19:00'), ort: 'Vereinsheim', kategorie: 'Sonstiges' as const, oeffentlich: false },
+    { id: 'tm1', titel: 'Schnupperkurs – in allen Abteilungen möglich', beginn: wochentag(2, 0, '18:00'), ende: wochentag(2, 0, '19:00'), ort: alex, kategorie: 'Verein' as const, oeffentlich: true, beschreibung: 'Ein Schnupperkurs ist jederzeit zu den Trainingszeiten möglich – einfach vorbeikommen oder vorher per E-Mail melden.' },
+    { id: 'tm2', titel: 'Mitgliederversammlung', beginn: '2026-07-24T18:00', ort: 'Dessau-Roßlau', kategorie: 'Versammlung' as const, oeffentlich: true },
+    { id: 'tm3', titel: 'Vorstandssitzung (Beispieltermin)', beginn: zeitpunkt(12, '19:00'), kategorie: 'Versammlung' as const, oeffentlich: false },
+    { id: 'tm4', titel: 'Weihnachtsfeier (Beispieltermin)', beginn: zeitpunkt(52, '17:00'), ort: 'wird bekanntgegeben', kategorie: 'Fest' as const, oeffentlich: true },
   ];
 
   const sponsoren = [
-    ['Apotheke am Stadtpark', 'Hauptsponsor', '#047857', 'Gesundheit für den ganzen Verein – Partner des Jugend- und Gesundheitssports.'],
-    ['Physiotherapie Muldeaue', 'Premium', '#0369a1', 'Physio und Sportmedizin für unsere Aktiven.'],
-    ['Autohaus Elbe-Mulde GmbH', 'Premium', '#1d4ed8', 'Mannschaftsbus und Trikotsatz der 1. Herren.'],
-    ['Bäckerei Krause', 'Partner', '#b45309', ''], ['Elektro Schulze GmbH', 'Partner', '#7c3aed', ''], ['Getränke Paul', 'Partner', '#be123c', ''],
-    ['Zahnarztpraxis Dr. Weber', 'Förderer', '#0f766e', ''], ['Malermeister Lange', 'Förderer', '#4d7c0f', ''],
-  ].map(([name, stufe, farbe, beschreibung], i) => ({ id: `sp${i + 1}`, name, stufe: stufe as 'Partner', url: 'https://example.com', logo: initialenLogo(name, farbe),
-    beschreibung: beschreibung || undefined, seit: String(2015 + i), aktiv: true }));
-
-  const alben: Album[] = [
-    { id: 'al1', titel: 'Heimspieltag gegen ' + (letztesH1?.gegner ?? 'FSV Elbaue'), datum: zeitpunkt(-7).slice(0, 10), mannschaftId: 'herren-1', oeffentlich: true,
-      bilder: [['jubel', BLAU, DUNKEL], ['feld', '#15803d', '#14532d'], ['ball', BLAU, DUNKEL], ['jubel', '#0f766e', '#064e3b'], ['feld', BLAU, '#1e293b']].map(([m, a, b], i) => ({ id: `b1${i}`, src: platzhalter(m as 'feld', a, b), titel: `Szene ${i + 1}` })),
-      videos: [{ id: 'v1', titel: 'Tore des Spieltags', youtubeId: 'dQw4w9WgXcQ' }] },
-    { id: 'al2', titel: 'Herbstcup E-Junioren', datum: zeitpunkt(-4).slice(0, 10), mannschaftId: 'e-jugend', oeffentlich: true,
-      bilder: [['pokal', '#0f766e', '#064e3b'], ['jubel', GOLD, '#b45309'], ['ball', '#0f766e', '#064e3b'], ['feld', '#15803d', '#14532d']].map(([m, a, b], i) => ({ id: `b2${i}`, src: platzhalter(m as 'feld', a, b) })), videos: [] },
-    { id: 'al3', titel: 'Sommerfest 2026', datum: zeitpunkt(-110).slice(0, 10), oeffentlich: true, beschreibung: 'Hüpfburg, Elfmeterkönig und Grillstand.',
-      bilder: [['fest', '#7c3aed', '#4c1d95'], ['fest', '#db2777', '#831843'], ['jubel', '#7c3aed', '#4c1d95'], ['pokal', '#db2777', '#831843'], ['fest', BLAU, DUNKEL], ['ball', '#7c3aed', '#4c1d95']].map(([m, a, b], i) => ({ id: `b3${i}`, src: platzhalter(m as 'feld', a, b) })), videos: [] },
+    { id: 'sp1', name: 'Alexianer Sachsen-Anhalt GmbH', stufe: 'Hauptsponsor' as const, url: 'https://www.alexianer.de', beschreibung: 'Kooperationspartner seit Juni 2017 – wir nutzen die Sport- und Therapiehalle am St. Joseph-Krankenhaus.', seit: '2017', aktiv: true },
   ];
 
-  // ---- Mitglieder (eines hat heute Geburtstag, eines in drei Tagen) ----
+  const alben: Album[] = [
+    { id: 'al1', titel: 'Unsere Kurse', datum: '2025-09-01', oeffentlich: true, beschreibung: 'Zumba, Step, Piloxing, Karate und Sportschießen bei der BSG Medizin',
+      bilder: [['zumba.png', 'Zumba®'], ['step.png', 'Step'], ['piloxing.png', 'Piloxing'], ['karate.png', 'Karate'], ['sportschiessen.png', 'Sportschießen']].map(([d, t], i) => ({ id: `b1${i}`, src: bild(d), titel: t })), videos: [] },
+    { id: 'al2', titel: 'Sportschießen', datum: '2025-06-01', mannschaftId: 'sportschiessen', oeffentlich: true,
+      bilder: [{ id: 'b20', src: bild('sportschiessen.png'), titel: 'Training' }, { id: 'b21', src: bild('logo-sportschiessen.jpg'), titel: 'Logo der Abteilung' }], videos: [] },
+  ];
+
+  // ---- Beispiel-Mitglieder (ausgedacht; eines hat heute Geburtstag) ----
   const heute = new Date();
   const z = (n: number) => String(n).padStart(2, '0');
-  const mitglieder: Mitglied[] = spieler.slice(0, 30).map((p, i) => {
-    const jahr = p.geburtsjahr ?? 1990;
+  const mitglieder: Mitglied[] = spieler.map((p, i) => {
+    const jahr = p.geburtsjahr ?? 1980;
     const tag = i === 0 ? heute : i === 1 ? new Date(heute.getFullYear(), heute.getMonth(), heute.getDate() + 3) : new Date(jahr, Math.floor(r() * 12), 1 + Math.floor(r() * 28));
     const m = mannschaften.find((x) => x.id === p.mannschaftId)!;
     return { id: `m${i + 1}`, vorname: p.vorname, nachname: p.nachname, geburtsdatum: `${jahr}-${z(tag.getMonth() + 1)}-${z(tag.getDate())}`,
       email: `${p.vorname.toLowerCase()}.${p.nachname.toLowerCase().replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae')}@example.com`,
-      eintritt: `${Math.max(jahr + 6, 2005 + (i % 18))}-0${1 + (i % 9)}-01`, abteilung: `Fußball – ${m.name}`, beitragId: m.kategorie === 'Jugend' ? 'b2' : 'b1',
-      status: i % 13 === 7 ? 'passiv' : 'aktiv', geburtstagZeigen: i < 2 || r() > 0.4, ort: 'Dessau-Roßlau', plz: '06844' };
+      eintritt: `${2016 + (i % 10)}-0${1 + (i % 9)}-01`, abteilung: m.name, beitragId: m.kategorie === 'Jugend' ? 'b2' : jahr < 1960 ? 'b3' : 'b1',
+      status: i % 13 === 7 ? 'passiv' : 'aktiv', geburtstagZeigen: i < 2 || r() > 0.5, ort: 'Dessau-Roßlau', plz: '06847' };
   });
 
   const trainings: Training[] = [];
-  const kaderH1 = spieler.filter((p) => p.mannschaftId === 'herren-1');
-  const themen = ['Spielaufbau gegen hohes Pressing', 'Torabschluss & Flanken', 'Standardsituationen', 'Ausdauer – Intervalle', 'Umschaltspiel', 'Abschlusstraining'];
-  themen.forEach((thema, i) => {
+  ['Aufschlag & Return', 'Doppeltaktik', 'Laufwege', 'Smash & Drop', 'Freies Spiel'].forEach((thema, i) => {
     const anwesenheit: Training['anwesenheit'] = {};
-    for (const p of kaderH1) { const x = r(); anwesenheit[p.id] = x > 0.22 ? 'da' : x > 0.12 ? 'entschuldigt' : x > 0.05 ? 'fehlt' : 'verletzt'; }
-    trainings.push({ id: `tr${i}`, mannschaftId: 'herren-1', datum: wochentag(i % 2 ? 4 : 2, -(3 - Math.floor(i / 2)), '18:30'), dauer: 90, ort: 'Platz 2 (Kunstrasen)', thema,
-      inhalt: '15 min Aufwärmen mit Ball\n20 min Passformen\n30 min Spielform 8 gegen 8\n15 min Abschluss\n10 min Auslaufen', anwesenheit });
+    for (const p of kaderB) { const x = r(); anwesenheit[p.id] = x > 0.22 ? 'da' : x > 0.12 ? 'entschuldigt' : 'fehlt'; }
+    trainings.push({ id: `tr${i}`, mannschaftId: 'badminton', datum: wochentag(2, -(5 - i), '19:00'), dauer: 120, ort: alex, thema, inhalt: 'Aufwärmen & Laufschule 15 min\nTechnik 30 min\nSpielformen 60 min\nAuslaufen 15 min', anwesenheit });
   });
-  trainings.push({ id: 'tr-n1', mannschaftId: 'herren-1', datum: wochentag(2, 1, '18:30'), dauer: 90, ort: 'Platz 2 (Kunstrasen)', thema: 'Gegnervorbereitung', inhalt: 'Videoanalyse 15 min\nPressing-Auslöser 30 min\nAbschlussspiel', anwesenheit: {} });
+  trainings.push({ id: 'tr-n1', mannschaftId: 'badminton', datum: wochentag(2, 1, '19:00'), dauer: 120, ort: alex, thema: 'Doppel-Turnierform', inhalt: 'Aufwärmen\nDoppel im Rotationsprinzip', anwesenheit: {} });
+
+  // ---- Gegner-Datenbank: Vereine aus der Umgebung (Logos lädt der Admin mit Erlaubnis des Vereins hoch) ----
+  const gm = (zusatz: string, sportart: string, kategorie: Mannschaft['kategorie']) => ({ id: id('gm'), zusatz, sportart, kategorie });
+  const gegner: Gegnerverein[] = [
+    { id: 'gv1', name: 'Dessauer SV 97', ort: 'Dessau-Roßlau', farbe: '#1d4ed8', webseite: 'https://www.dessauer-sv97.de', mannschaften: [gm('', 'Fußball', 'Herren'), gm('II', 'Fußball', 'Herren'), gm('AH', 'Fußball', 'Senioren'), gm('', 'Fußball', 'Frauen'), gm('', 'Fußball', 'Jugend')] },
+    { id: 'gv2', name: 'ASG Vorwärts Dessau', ort: 'Dessau-Roßlau', farbe: '#ca8a04', mannschaften: [gm('', 'Fußball', 'Herren'), gm('II', 'Fußball', 'Herren')] },
+    { id: 'gv3', name: 'SV Dessau 05', ort: 'Dessau-Roßlau', farbe: '#b91c1c', mannschaften: [gm('', 'Fußball', 'Herren'), gm('', 'Fußball', 'Jugend')] },
+    { id: 'gv4', name: 'FC Eintracht Köthen', ort: 'Köthen', farbe: '#7f1d1d', mannschaften: [gm('', 'Fußball', 'Herren'), gm('AH', 'Fußball', 'Senioren')] },
+    { id: 'gv5', name: 'TSV Rot-Weiß Zerbst', ort: 'Zerbst', farbe: '#dc2626', mannschaften: [gm('', 'Fußball', 'Herren'), gm('', 'Fußball', 'Jugend')] },
+    { id: 'gv6', name: 'SV Oranienbaum', ort: 'Oranienbaum-Wörlitz', farbe: '#ea580c', mannschaften: [gm('', 'Fußball', 'Frauen')] },
+    ...['FSV Elbaue (Beispiel)', 'SG Kühnau (Beispiel)', 'Grün-Weiß Mildensee (Beispiel)', 'SV Waldersee (Beispiel)', 'Eintracht Ziebigk (Beispiel)', 'VfB Törten (Beispiel)', 'SG Kochstedt (Beispiel)', 'FC Mosigkau (Beispiel)'].map((name, i) => ({ id: `gvf${i}`, name, farbe: ['#0369a1', '#15803d', '#a16207', '#4338ca', '#9f1239', '#0f766e', '#6d28d9', '#c2410c'][i], mannschaften: [gm('', 'Fußball', 'Herren'), gm('', 'Fußball', 'Frauen'), gm('', 'Fußball', 'Jugend')] })),
+    ...BADMINTON_GEGNER.map((name, i) => ({ id: `gvb${i}`, name, farbe: ['#0f766e', '#7c3aed', '#be123c', '#1d4ed8'][i], mannschaften: [gm('', 'Badminton', 'Erwachsene' as const)] })),
+  ];
 
   return {
-    version: 1, verein, mannschaften, spieler, spiele, tabellen, news, termine, sponsoren, alben, benutzer, mitglieder, trainings,
+    version: 1, verein, mannschaften, spieler, spiele, tabellen, news, termine, sponsoren, alben, benutzer, mitglieder, trainings, gegner,
     dokumente: [
-      { id: 'd1', titel: 'Satzung', kategorie: 'Satzung & Ordnungen', dateiname: 'satzung.txt', inhalt: textDatei(verein.satzung), datum: zeitpunkt(-200).slice(0, 10), sichtbar: 'oeffentlich' },
-      { id: 'd2', titel: 'Beitragsordnung', kategorie: 'Satzung & Ordnungen', dateiname: 'beitragsordnung.txt', inhalt: textDatei(verein.beitraege.map((b) => `${b.name}: ${b.betrag.toFixed(2)} € ${b.intervall}`).join('\n')), datum: zeitpunkt(-200).slice(0, 10), sichtbar: 'oeffentlich' },
-      { id: 'd3', titel: 'Protokoll Mitgliederversammlung 2026', kategorie: 'Protokolle', dateiname: 'protokoll-mv-2026.txt', inhalt: textDatei('Protokoll (Beispiel)…'), datum: zeitpunkt(-160).slice(0, 10), sichtbar: 'mitglieder' },
-      { id: 'd4', titel: 'Hallenordnung Turnhalle Nord', kategorie: 'Formulare & Infos', dateiname: 'hallenordnung.txt', inhalt: textDatei('Hallenordnung (Beispiel)…'), datum: zeitpunkt(-90).slice(0, 10), sichtbar: 'mitglieder' },
-      { id: 'd5', titel: 'Trainerleitfaden & Kinderschutzkonzept', kategorie: 'Trainer', dateiname: 'trainerleitfaden.txt', inhalt: textDatei('Leitfaden (Beispiel)…'), datum: zeitpunkt(-40).slice(0, 10), sichtbar: 'trainer' },
-      { id: 'd6', titel: 'Kassenbericht 3. Quartal', kategorie: 'Vorstand', dateiname: 'kassenbericht-q3.txt', inhalt: textDatei('Kassenbericht (Beispiel)…'), datum: zeitpunkt(-20).slice(0, 10), sichtbar: 'vorstand' },
+      { id: 'd1', titel: 'Mitgliedsantrag (Aufnahmeantrag)', kategorie: 'Mitgliedschaft', dateiname: 'mitgliedsantrag.pdf', url: bild('mitgliedsantrag.pdf'), datum: '2018-01-01', sichtbar: 'oeffentlich' },
+      { id: 'd2', titel: 'Beitragsordnung (ab 01.01.2018)', kategorie: 'Mitgliedschaft', dateiname: 'beitragsordnung.pdf', url: bild('beitragsordnung.pdf'), datum: '2018-03-09', sichtbar: 'oeffentlich' },
+      { id: 'd3', titel: 'Vereinssatzung (Änderung 2015)', kategorie: 'Satzung & Ordnungen', dateiname: 'satzung.pdf', url: bild('satzung.pdf'), datum: '2015-01-01', sichtbar: 'oeffentlich' },
+      { id: 'd4', titel: 'Fotoerlaubnis (Einwilligung)', kategorie: 'Mitgliedschaft', dateiname: 'fotoerlaubnis.pdf', url: bild('fotoerlaubnis.pdf'), datum: '2017-01-01', sichtbar: 'oeffentlich' },
+      { id: 'd5', titel: 'Hallenbelegungsplan (November 2025)', kategorie: 'Sporthallen', dateiname: 'hallenbelegungsplan.pdf', url: bild('hallenbelegungsplan.pdf'), datum: '2025-11-01', sichtbar: 'oeffentlich' },
     ],
     mitteilungen: [
-      { id: 'mt1', titel: 'Platzsperre wegen Nässe', text: 'Platz 1 ist bis Freitag gesperrt. Training findet auf Platz 2 statt.', datum: zeitpunkt(-1, '08:15'), autor: 'Mike Platzwart', an: 'alle', wichtig: true, gelesenVon: [] },
-      { id: 'mt2', titel: 'Trikotwäsche Spieltag', text: 'Diese Woche ist die 1. Herren mit der Trikotwäsche dran.', datum: zeitpunkt(-3, '19:00'), autor: 'Tom Trainer', an: 'herren-1', wichtig: false, gelesenVon: [] },
-      { id: 'mt3', titel: 'Neue Lizenzlehrgänge', text: 'Der Kreisverband bietet im Winter C-Lizenz-Lehrgänge an. Kosten übernimmt der Verein.', datum: zeitpunkt(-5, '12:00'), autor: 'Andreas Beispiel', an: 'trainer', wichtig: false, gelesenVon: [] },
+      { id: 'mt1', titel: 'Kommunikation nur noch per E-Mail', text: 'Telefonisch ist die BSG nicht mehr erreichbar. Bitte alle Anliegen an bsg.medizin.dessau.ev@gmail.com.', datum: zeitpunkt(-3, '09:00'), autor: 'Vorstand', an: 'alle', wichtig: true, gelesenVon: [] },
+      { id: 'mt2', titel: 'Hallenbelegungsplan aktualisiert', text: 'Der Hallenbelegungsplan (November 2025) liegt unter Dokumente bereit.', datum: zeitpunkt(-8, '18:00'), autor: 'Vorstand', an: 'alle', wichtig: false, gelesenVon: [] },
+      { id: 'mt3', titel: 'Trainerabsprache (Beispiel)', text: 'Bitte Hallenschlüssel nach dem Training wieder im Kasten deponieren.', datum: zeitpunkt(-5, '12:00'), autor: 'Vera Vorstand', an: 'trainer', wichtig: false, gelesenVon: [] },
     ],
     antraege: [
-      { id: 'a1', datum: zeitpunkt(-1, '20:14'), status: 'neu', vorname: 'Emil', nachname: 'Neuling', geburtsdatum: '2018-05-12', strasse: 'Musterweg 3', plz: '06844', ort: 'Dessau-Roßlau',
-        email: 'familie.neuling@example.com', abteilung: 'Fußball – F-Junioren (U9)', beitragId: 'b2', erziehungsberechtigter: 'Jana Neuling', kontoinhaber: 'Jana Neuling', iban: 'DE02120300000000202051', sepa: true, fotoFreigabe: true },
-      { id: 'a2', datum: zeitpunkt(-3, '09:02'), status: 'in Bearbeitung', vorname: 'Petra', nachname: 'Gesund', geburtsdatum: '1961-09-30', strasse: 'Parkallee 8', plz: '06846', ort: 'Dessau-Roßlau',
-        email: 'petra.gesund@example.com', abteilung: 'Reha- & Gesundheitssport', beitragId: 'b1', sepa: false, fotoFreigabe: false, notiz: 'Verordnung liegt vor' },
+      { id: 'a1', datum: zeitpunkt(-1, '20:14'), status: 'neu', vorname: 'Emil', nachname: 'Beispiel', geburtsdatum: '2010-05-12', strasse: 'Musterweg 3', plz: '06847', ort: 'Dessau-Roßlau',
+        email: 'familie.beispiel@example.com', abteilung: 'Sportschießen Jugend (ab 14)', beitragId: 'b2', erziehungsberechtigter: 'Jana Beispiel', kontoinhaber: 'Jana Beispiel', iban: 'DE02120300000000202051', sepa: true, fotoFreigabe: true, notiz: 'Beispielantrag' },
     ],
     anfragen: [
-      { id: 'q1', datum: zeitpunkt(-2, '17:40'), name: 'Familie Klein', email: 'klein@example.com', betreff: 'Probetraining für meinen Sohn (7 J.)', nachricht: 'Hallo, wann kann unser Sohn zum Probetraining kommen?', an: 'Jugendabteilung', status: 'neu' },
-      { id: 'q2', datum: zeitpunkt(-6, '10:11'), name: 'Firma Beispiel GmbH', email: 'info@example.com', betreff: 'Bandenwerbung', nachricht: 'Wir interessieren uns für eine Bande am Platz 1.', an: 'Sponsoring', status: 'beantwortet' },
+      { id: 'q1', datum: zeitpunkt(-2, '17:40'), name: 'Beispiel-Anfrage', email: 'interessent@example.com', betreff: 'Schnupperstunde Zumba', nachricht: 'Hallo, kann ich am Dienstag einfach zum Zumba vorbeikommen? (Beispiel)', an: 'Zumba', status: 'neu' },
     ],
+    gaestebuch: [],
     protokoll: [],
-    aufrufe: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [zeitpunkt(-29 + i).slice(0, 10), 40 + Math.floor(r() * 90) + (i % 7 === 5 ? 80 : 0)])),
+    aufrufe: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [zeitpunkt(-29 + i).slice(0, 10), 20 + Math.floor(r() * 50) + (i % 7 === 2 ? 30 : 0)])),
   };
-}
-
-function textDatei(text: string): string {
-  return 'data:text/plain;charset=utf-8,' + encodeURIComponent(text);
 }
