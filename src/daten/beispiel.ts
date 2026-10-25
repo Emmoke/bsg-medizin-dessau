@@ -27,6 +27,8 @@ function wochentag(tag: number, wochen: number, uhr: string): string {
 
 const BASIS = import.meta.env?.BASE_URL ?? '/';
 const bild = (datei: string) => `${BASIS}bsg/${datei}`;
+/** Freie Fotos von Unsplash (Unsplash-Lizenz, kommerziell nutzbar) – Nachweis im Impressum */
+const foto = (datei: string) => `${BASIS}fotos/${datei}`;
 
 const VORNAMEN = ['Lukas', 'Anja', 'Paul', 'Katrin', 'Jonas', 'Sabine', 'Tim', 'Nicole', 'Thomas', 'Petra', 'Moritz', 'Jana', 'Frank', 'Ines', 'Kevin', 'Heike', 'Dirk', 'Claudia'];
 const JUGEND = ['Leon', 'Mia', 'Finn', 'Lea', 'Noah', 'Emma', 'Ben', 'Lina'];
@@ -53,6 +55,7 @@ export function beispielDaten(): Datenbestand {
     farbeAkzent: '#e3001b',
     logo: `${BASIS}wappen.png`,
     titelbild: bild('zumba.png'),
+    sportBilder: { 'Fußball': foto('fussball-herren.jpg'), Badminton: foto('badminton.jpg'), Feldenkrais: foto('feldenkrais.jpg'), 'Sportschießen': bild('sportschiessen.png'), Zumba: bild('zumba.png') },
     strasse: 'Große Schaftrift 5', plz: '06847', ort: 'Dessau-Roßlau',
     email: 'bsg.medizin.dessau.ev@gmail.com', telefon: '',
     facebook: 'https://www.facebook.com/BSGMEDIZIN/',
@@ -86,7 +89,7 @@ export function beispielDaten(): Datenbestand {
       { id: 'b8', name: 'Familienmitgliedschaft (betriebsfremd)', betrag: 24, intervall: 'monatlich' },
       { id: 'b9', name: 'Familienmitgliedschaft Senioren (betriebsfremd)', betrag: 22, intervall: 'monatlich' },
     ],
-    impressum: 'Angaben gemäß § 5 DDG\n\nBSG Medizin Dessau e.V.\nGroße Schaftrift 5\n06847 Dessau-Roßlau\n\nVertreten durch:\nSipan Khalil (Vorsitzender)\nHuner Khalil (Schatzmeister)\n\nKontakt: bsg.medizin.dessau.ev@gmail.com\n\nRegistereintrag: Vereinsregister, Registergericht Amtsgericht Stendal, Registernummer VR 2657\n\nWir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.',
+    impressum: 'Angaben gemäß § 5 DDG\n\nBSG Medizin Dessau e.V.\nGroße Schaftrift 5\n06847 Dessau-Roßlau\n\nVertreten durch:\nSipan Khalil (Vorsitzender)\nHuner Khalil (Schatzmeister)\n\nKontakt: bsg.medizin.dessau.ev@gmail.com\n\nRegistereintrag: Vereinsregister, Registergericht Amtsgericht Stendal, Registernummer VR 2657\n\nWir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.\n\nBildnachweis\nFotos Zumba, Step, Piloxing, Karate, Sportschießen: BSG Medizin Dessau e.V.\nFotos Badminton, Feldenkrais und Fußball: Unsplash (unsplash.com) – Unsplash-Lizenz. Symbolbilder, keine Vereinsmitglieder.',
     datenschutz: 'Verantwortlicher: BSG Medizin Dessau e.V., Große Schaftrift 5, 06847 Dessau-Roßlau, bsg.medizin.dessau.ev@gmail.com.\n\nDiese Webseite setzt keine Tracking-Cookies und keine Analysewerkzeuge Dritter ein. Seitenaufrufe werden nur als anonyme Tageszahl gezählt.\n\nFormulare (Kontakt, Mitgliedsantrag, Gästebuch): Die Angaben werden ausschließlich zur Bearbeitung Ihres Anliegens bzw. zur Mitgliederverwaltung verwendet (Art. 6 Abs. 1 lit. b DSGVO) und nicht an Dritte weitergegeben, außer an Sportverbände, soweit für den Sportbetrieb erforderlich.\n\nFotos: Bilder von Mitgliedern werden nur mit Einwilligung (Formular „Fotoerlaubnis“) veröffentlicht (Art. 6 Abs. 1 lit. a DSGVO); die Einwilligung kann jederzeit widerrufen werden.\n\nIhre Rechte: Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie Beschwerde bei der Aufsichtsbehörde (Landesbeauftragter für den Datenschutz Sachsen-Anhalt).\n\n(Bitte vor Veröffentlichung rechtlich prüfen lassen.)',
     saison: '2026/27',
     namenKuerzen: true,
@@ -110,16 +113,16 @@ export function beispielDaten(): Datenbestand {
   const k = (name: string, amt: string) => ({ id: id('k'), name, amt });
   const alex = 'Sporthalle der Alexianer', zob = 'Sporthalle Grundschule Zoberberg', sar = 'Schießstand Roßlau (SAR)';
   const mannschaften: Mannschaft[] = [
-    { id: 'badminton', name: 'Badminton', kurz: 'BA', sportart: 'Badminton', kategorie: 'Erwachsene', trainerIds: ['u-trainer'], reihenfolge: 1,
+    { id: 'badminton', name: 'Badminton', kurz: 'BA', sportart: 'Badminton', kategorie: 'Erwachsene', trainerIds: ['u-trainer'], reihenfolge: 1, bild: foto('badminton.jpg'),
       betreuer: [k('S. Siegel', 'Ansprechpartner')], trainingszeiten: [{ tag: 'Dienstag', von: '19:00', bis: '21:00', ort: alex }],
       beschreibung: 'Badminton für Einsteiger und Fortgeschrittene in der Halle der Alexianer – Spaß am Spiel steht im Vordergrund. Schnuppern ist jederzeit zu den Trainingszeiten möglich.' },
-    { id: 'feldenkrais', name: 'Feldenkrais', kurz: 'FK', sportart: 'Feldenkrais', kategorie: 'Freizeit', trainerIds: [], reihenfolge: 2,
+    { id: 'feldenkrais', name: 'Feldenkrais', kurz: 'FK', sportart: 'Feldenkrais', kategorie: 'Freizeit', trainerIds: [], reihenfolge: 2, bild: foto('feldenkrais.jpg'),
       betreuer: [k('Christine Freitag', 'Ansprechpartnerin')], trainingszeiten: [{ tag: 'Mittwoch', von: '19:30', bis: '21:00', ort: alex }],
       beschreibung: 'Bewusstheit durch Bewegung: sanfte Übungen für mehr Beweglichkeit, Haltung und Wohlbefinden – für jedes Alter geeignet.' },
     { id: 'sportschiessen', name: 'Sportschießen', kurz: 'SG', sportart: 'Sportschießen', kategorie: 'Erwachsene', trainerIds: ['u-trainer'], reihenfolge: 3, bild: bild('sportschiessen.png'),
       betreuer: [k('Jörg Bauer', 'Ansprechpartner'), k('Hartmut Friedrich', 'Ansprechpartner')], trainingszeiten: [{ tag: 'Freitag', von: '16:00', bis: '20:00', ort: sar }],
       beschreibung: 'Präzision. Disziplin. Gemeinschaft. Mitglied im Bund Deutscher Sportschützen (BDS): Training auf Distanzen zwischen 25 und 300 Metern mit Kurz- und Langwaffen, Klein- und Großkaliber. Unsere Mitglieder nehmen regelmäßig und erfolgreich an Landes- und Deutschen Meisterschaften teil. Unterstützung beim Erwerb der Sachkundeprüfung nach dem Waffengesetz.' },
-    { id: 'sportschiessen-jugend', name: 'Sportschießen Jugend (ab 14)', kurz: 'SJ', sportart: 'Sportschießen', kategorie: 'Jugend', trainerIds: [], reihenfolge: 4,
+    { id: 'sportschiessen-jugend', name: 'Sportschießen Jugend (ab 14)', kurz: 'SJ', sportart: 'Sportschießen', kategorie: 'Jugend', trainerIds: [], reihenfolge: 4, bild: bild('sportschiessen.png'),
       betreuer: [k('Jörg Bauer', 'Schießleiter'), k('Hartmut Friedrich', 'Schießleiter')], trainingszeiten: [{ tag: 'Freitag', von: '16:00', bis: '20:00', ort: sar }],
       beschreibung: 'Nachwuchsförderung ist uns wichtig: Jugendliche ab 14 Jahren trainieren mit Kleinkaliberwaffen – betreut von speziell für die Jugendarbeit befähigten Schießleitern für eine sichere Ausbildung. Erfolge vom Deutschen Meister bis zum Vizeeuropameister.' },
     { id: 'zumba', name: 'Zumba®', kurz: 'ZU', sportart: 'Zumba', kategorie: 'Freizeit', trainerIds: [], reihenfolge: 5, bild: bild('zumba.png'),
@@ -130,13 +133,13 @@ export function beispielDaten(): Datenbestand {
   // ---- Abteilung Fußball (neu im Aufbau – Mannschaften nach dem Vorbild Dessauer SV 97; Spieler/Ergebnisse sind Beispiele) ----
   const fz = (tag: string, von: string, bis: string) => ({ tag, von, bis, ort: 'Sportplatz Schaftrift' });
   const fussball: Mannschaft[] = [
-    { id: 'herren-1', name: '1. Herren', kurz: '1H', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisoberliga Anhalt', trainerIds: ['u-trainer'], betreuer: [k('Tom Trainer', 'Trainer')], trainingszeiten: [fz('Dienstag', '18:30', '20:00'), fz('Donnerstag', '18:30', '20:00')], reihenfolge: 10, beschreibung: 'Unsere neue Fußballabteilung – Spieler jeden Alters sind willkommen. (Beispieldaten)' },
-    { id: 'herren-2', name: '2. Herren', kurz: '2H', spielName: 'BSG Medizin Dessau II', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisliga Nord', trainerIds: [], betreuer: [k('N. N.', 'Trainer')], trainingszeiten: [fz('Mittwoch', '18:30', '20:00')], reihenfolge: 11 },
-    { id: 'alte-herren', name: 'Alte Herren Ü35', kurz: 'AH', spielName: 'BSG Medizin Dessau AH', sportart: 'Fußball', kategorie: 'Senioren', liga: 'Freundschaftsspiele', trainerIds: [], betreuer: [k('N. N.', 'Ansprechpartner')], trainingszeiten: [fz('Freitag', '18:00', '19:30')], reihenfolge: 12 },
-    { id: 'frauen', name: 'Frauen', kurz: 'F', sportart: 'Fußball', kategorie: 'Frauen', liga: 'Landesklasse Frauen', trainerIds: [], betreuer: [k('N. N.', 'Trainerin')], trainingszeiten: [fz('Montag', '18:00', '19:30')], reihenfolge: 13 },
-    { id: 'e-jugend', name: 'E-Junioren (U11)', kurz: 'E', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Kreisliga Staffel 1', trainerIds: [], betreuer: [k('N. N.', 'Trainer')], trainingszeiten: [fz('Dienstag', '16:30', '18:00')], reihenfolge: 14 },
-    { id: 'f-jugend', name: 'F-Junioren (U9)', kurz: 'F', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Fairplay-Liga', trainerIds: ['u-trainer'], betreuer: [k('Tom Trainer', 'Trainer')], trainingszeiten: [fz('Mittwoch', '16:30', '18:00')], reihenfolge: 15 },
-    { id: 'bambini', name: 'Bambini (U7)', kurz: 'G', sportart: 'Fußball', kategorie: 'Jugend', trainerIds: [], betreuer: [k('N. N.', 'Trainer/in')], trainingszeiten: [{ tag: 'Samstag', von: '10:00', bis: '11:00', ort: 'Sportplatz Schaftrift' }], reihenfolge: 16 },
+    { id: 'herren-1', name: '1. Herren', kurz: '1H', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisoberliga Anhalt', bild: foto('fussball-team.jpg'), trainerIds: ['u-trainer'], betreuer: [k('Tom Trainer', 'Trainer')], trainingszeiten: [fz('Dienstag', '18:30', '20:00'), fz('Donnerstag', '18:30', '20:00')], reihenfolge: 10, beschreibung: 'Unsere neue Fußballabteilung – Spieler jeden Alters sind willkommen. (Beispieldaten)' },
+    { id: 'herren-2', name: '2. Herren', kurz: '2H', spielName: 'BSG Medizin Dessau II', sportart: 'Fußball', kategorie: 'Herren', liga: 'Kreisliga Nord', bild: foto('fussball-herren.jpg'), trainerIds: [], betreuer: [k('N. N.', 'Trainer')], trainingszeiten: [fz('Mittwoch', '18:30', '20:00')], reihenfolge: 11 },
+    { id: 'alte-herren', name: 'Alte Herren Ü35', kurz: 'AH', spielName: 'BSG Medizin Dessau AH', sportart: 'Fußball', kategorie: 'Senioren', liga: 'Freundschaftsspiele', bild: foto('fussball-senioren.jpg'), trainerIds: [], betreuer: [k('N. N.', 'Ansprechpartner')], trainingszeiten: [fz('Freitag', '18:00', '19:30')], reihenfolge: 12 },
+    { id: 'frauen', name: 'Frauen', kurz: 'F', sportart: 'Fußball', kategorie: 'Frauen', liga: 'Landesklasse Frauen', bild: foto('fussball-frauen.jpg'), trainerIds: [], betreuer: [k('N. N.', 'Trainerin')], trainingszeiten: [fz('Montag', '18:00', '19:30')], reihenfolge: 13 },
+    { id: 'e-jugend', name: 'E-Junioren (U11)', kurz: 'E', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Kreisliga Staffel 1', bild: foto('fussball-jugend.jpg'), trainerIds: [], betreuer: [k('N. N.', 'Trainer')], trainingszeiten: [fz('Dienstag', '16:30', '18:00')], reihenfolge: 14 },
+    { id: 'f-jugend', name: 'F-Junioren (U9)', kurz: 'F', sportart: 'Fußball', kategorie: 'Jugend', liga: 'Fairplay-Liga', bild: foto('fussball-kinder.jpg'), trainerIds: ['u-trainer'], betreuer: [k('Tom Trainer', 'Trainer')], trainingszeiten: [fz('Mittwoch', '16:30', '18:00')], reihenfolge: 15 },
+    { id: 'bambini', name: 'Bambini (U7)', kurz: 'G', sportart: 'Fußball', kategorie: 'Jugend', bild: foto('fussball-kinder.jpg'), trainerIds: [], betreuer: [k('N. N.', 'Trainer/in')], trainingszeiten: [{ tag: 'Samstag', von: '10:00', bis: '11:00', ort: 'Sportplatz Schaftrift' }], reihenfolge: 16 },
   ];
   mannschaften.push(...fussball);
 

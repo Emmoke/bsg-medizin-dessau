@@ -9,7 +9,7 @@ import { useSeite } from '../seo';
 import { Leer } from '../ui/bausteine';
 import { AusgangPunkt, Inhalt, SeitenKopf, SpielZeile, TabellenAnsicht, Trainingszeiten } from './Teile';
 import { NichtGefunden } from './Inhalte';
-import { FigurAvatar, MannschaftsBild, SportSzene, Teamfoto, altersgruppe, echtesFoto, fotoFuer } from './SportSzene';
+import { MannschaftsBild, echtesFoto, fotoFuer } from './SportSzene';
 
 const BEREICHE: Kategorie[] = ['Erwachsene', 'Freizeit', 'Jugend', 'Herren', 'Frauen', 'Senioren'];
 
@@ -108,7 +108,7 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
 
   return (
     <>
-      <SeitenKopf titel={m.name} bild={fotoFuer(m, d.verein)} szene={fotoFuer(m, d.verein) ? undefined : <SportSzene m={m} primaer={d.verein.farbePrimaer} akzent={d.verein.farbeAkzent} className="h-full w-full" />} krumen={[{ text: 'Mannschaften', zu: '/mannschaften' }, { text: m.name }]}
+      <SeitenKopf titel={m.name} bild={fotoFuer(m, d.verein)} krumen={[{ text: 'Mannschaften', zu: '/mannschaften' }, { text: m.name }]}
         unter={<span className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/15 px-3 py-0.5 text-sm">{m.sportart}</span>{m.liga && <span className="rounded-full bg-akzent px-3 py-0.5 text-sm font-semibold text-white">{m.liga}</span>}<span className="text-sm">Saison {saison}</span></span>}>
         {b.spiele > 0 && (
           <div className="mt-6 flex flex-wrap gap-3">
@@ -155,9 +155,8 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
 
         {aktiv === 'team' && (
           <>
-            {(kader.length > 0 || echtesFoto(m)) && <figure className="mb-10 overflow-hidden rounded-3xl bg-slate-900 shadow-xl ring-1 ring-slate-200">
-              {echtesFoto(m) ? <img src={echtesFoto(m)} alt={`Mannschaftsfoto ${m.name}`} className="aspect-[16/9] w-full object-cover" />
-                : <Teamfoto m={m} spieler={kader} trainer={m.betreuer.map((b) => b.name)} v={d.verein} className="aspect-[16/10] w-full sm:aspect-[16/8]" />}
+            {echtesFoto(m) && <figure className="mb-10 overflow-hidden rounded-3xl bg-slate-900 shadow-xl ring-1 ring-slate-200">
+              <img src={echtesFoto(m)} alt={`Mannschaftsfoto ${m.name}`} className="aspect-[16/8] w-full object-cover" />
               <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-white px-5 py-3 text-sm text-slate-600">
                 <span><b className="text-slate-900">{m.name}</b> · {kader.length} Spieler · Saison {saison}</span>
                 <span>Trainer: {m.betreuer.map((b) => b.name).join(', ') || '–'}</span>
@@ -174,7 +173,7 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
                       <div key={p.id} className="schweben relative overflow-hidden rounded-2xl bg-gradient-to-br from-primaer to-primaer-dunkel p-4 text-white">
                         <span className="zahlen absolute -right-1 -top-3 text-6xl font-black text-white/10">{p.nummer}</span>
                         <span className="zahlen text-sm font-bold text-white/80">#{p.nummer ?? '–'}</span>
-                        <FigurAvatar nummer={p.nummer} frau={m.kategorie === 'Frauen'} gruppe={altersgruppe(m)} v={d.verein} className="mx-auto mt-1 h-24 w-20" />
+                        <span className="mx-auto mt-3 flex h-16 w-16 items-center justify-center rounded-full bg-white/15 text-xl font-black ring-2 ring-white/30">{p.vorname[0]}{p.nachname[0]}</span>
                         <p className="mt-2 text-center font-bold leading-tight">{spielerName(p, d.verein.namenKuerzen)}</p>
                       </div>
                     ))}
@@ -185,7 +184,7 @@ export function MannschaftDetail({ id, reiter = 'uebersicht' }: { id: string; re
             <h2 className="mb-3 mt-4 text-sm font-bold uppercase tracking-wider text-slate-500">Trainer & Betreuer</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{m.betreuer.map((p) => (
               <div key={p.id} className="rounded-2xl bg-slate-800 p-4 text-center text-white">
-                <FigurAvatar trainer gruppe="erwachsene" v={d.verein} className="mx-auto h-24 w-20" />
+                <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-xl font-black ring-2 ring-akzent">{p.name.split(' ').map((w) => w[0]).slice(-2).join('')}</span>
                 <p className="mt-2 font-bold leading-tight">{p.name}</p>
                 <p className="text-xs text-white/60">{p.amt}</p>
               </div>

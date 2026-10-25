@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Plus, Pencil, Trash2, Download, Upload, ArrowUp, ArrowDown, RefreshCw, Cake, Search } from 'lucide-react';
 import { aktualisieren, hinzufuegen, entfernen, neueId, speichereEintrag, vereinAendern } from '../daten/speicher';
 import { bilanz, datumKurz, geburtstage, sortiereTabelle, slug, alterAm } from '../daten/auswertung';
-import { MannschaftsBild, SportSzene } from '../oeffentlich/SportSzene';
+import { BildPlatzhalter, MannschaftsBild } from '../oeffentlich/SportSzene';
 import type { Beitrag, Chronikeintrag, Kategorie, Kontaktperson, Mannschaft, Mitglied, Spiel, Sportstaette, Tabelle, Tabellenzeile, Trainingszeit, Verein } from '../daten/typen';
 import { Auswahl, BildWahl, Dialog, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import type { SeitenProps } from './Portal';
@@ -85,14 +85,14 @@ export function VereinVerwaltung({ d }: SeitenProps) {
             </div>
           </Karte>
           <Karte titel="Fotos je Sportart" className="lg:col-span-2">
-            <p className="mb-4 text-sm text-slate-500">Ohne Foto zeigt die Webseite eine bewegte Szene passend zu Sportart und Altersgruppe. Ein Foto hier ersetzt die Szene für alle Mannschaften dieser Sportart – ein eigenes Mannschaftsfoto (unter „Mannschaften“) hat immer Vorrang. Nur Fotos mit Einwilligung der Abgebildeten verwenden.</p>
+            <p className="mb-4 text-sm text-slate-500">Ohne Foto zeigt die Webseite eine ruhige Fläche in Vereinsfarbe. Ein Foto hier ersetzt die Szene für alle Mannschaften dieser Sportart – ein eigenes Mannschaftsfoto (unter „Mannschaften“) hat immer Vorrang. Nur Fotos mit Einwilligung der Abgebildeten verwenden.</p>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {[...new Set(d.mannschaften.map((m) => m.sportart))].map((sportart) => {
                 const beispiel = d.mannschaften.find((m) => m.sportart === sportart)!;
                 return (
                   <div key={sportart} className="rounded-xl border border-slate-200 p-3">
                     <div className="mb-3 overflow-hidden rounded-lg">
-                      {v.sportBilder?.[sportart] ? <img src={v.sportBilder[sportart]} alt="" className="aspect-video w-full object-cover" /> : <SportSzene m={beispiel} primaer={v.farbePrimaer} akzent={v.farbeAkzent} className="aspect-video w-full" />}
+                      {v.sportBilder?.[sportart] ? <img src={v.sportBilder[sportart]} alt="" className="aspect-video w-full object-cover" /> : <BildPlatzhalter text={beispiel.sportart} v={v} className="aspect-video w-full" />}
                     </div>
                     <BildWahl label={sportart} wert={v.sportBilder?.[sportart]} onChange={(src) => {
                       const neu = { ...(v.sportBilder ?? {}) };

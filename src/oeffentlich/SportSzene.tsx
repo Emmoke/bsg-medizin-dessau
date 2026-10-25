@@ -225,7 +225,7 @@ export function fotoFuer(m: Mannschaft, v: Pick<Verein, 'sportBilder'>): string 
 /** Mannschaftsbild: echtes Foto, sonst bewegte Szene */
 export function MannschaftsBild({ m, v, className = '' }: { m: Mannschaft; v: Verein; className?: string }) {
   const foto = fotoFuer(m, v);
-  return foto ? <img src={foto} alt={m.name} loading="lazy" className={`object-cover ${className}`} /> : <SportSzene m={m} primaer={v.farbePrimaer} akzent={v.farbeAkzent} className={className} />;
+  return foto ? <img src={foto} alt={m.name} loading="lazy" className={`object-cover ${className}`} /> : <BildPlatzhalter text={m.sportart} v={v} className={className} />;
 }
 
 /** Mannschaftsfoto aus Figuren: Spieler mit Rückennummer in zwei Reihen, Trainer daneben (winkend) */
@@ -266,5 +266,16 @@ export function FigurAvatar({ nummer, trainer, frau, gruppe, v, className = '' }
       <circle cx="0" cy="-40" r="38" fill="#fff" opacity=".08" />
       <Figur x={0} y={0} s={1} trikot={trainer ? '#1e293b' : v.farbePrimaer} takt={0.5} art={trainer ? 'winken' : 'stehen'} nummer={nummer} trainer={trainer} zopf={frau} kind={gruppe === 'kinder'} grau={gruppe === 'senioren'} />
     </svg>
+  );
+}
+
+/** Ruhiger, hochwertiger Platzhalter ohne Foto: Vereinsfarbe, Wappen-Wasserzeichen, Filmkorn und Sportart */
+export function BildPlatzhalter({ text, v, className = '' }: { text: string; v: Verein; className?: string }) {
+  return (
+    <div className={`relative flex items-end overflow-hidden ${className}`} style={{ background: `linear-gradient(135deg, ${v.farbePrimaer}, color-mix(in oklab, ${v.farbePrimaer} 45%, #020617))` }}>
+      {v.logo && <img src={v.logo} alt="" className="absolute -right-6 -top-6 h-3/4 opacity-[.12] grayscale" aria-hidden />}
+      <div className="korn absolute inset-0 opacity-25 mix-blend-overlay" />
+      <span className="relative m-4 text-2xl font-black uppercase tracking-tight text-white/90">{text}</span>
+    </div>
   );
 }
