@@ -65,6 +65,50 @@ ${verein.name}`;
   }
 }
 
+// ---- Automatische Eingangsbestätigungen (Mitgliedsantrag, Kontaktanfrage) ----
+const vorstandAdresse = verein.domain && verein.email === verein.domain.info ? verein.domain.vorstand : verein.email || e.VEREIN_SMTP_ADRESSE;
+for (const [sammlung, art] of [['antraege', 'Mitgliedsantrag'], ['anfragen', 'Anfrage']]) {
+  const eingang = await db.collection(sammlung).where('bestaetigung', '==', 'offen').limit(20).get();
+  for (const d of eingang.docs) {
+    const x = d.data();
+    const name = x.vorname || x.name || '';
+    try {
+      const text = art === 'Mitgliedsantrag'
+        ? `Hallo ${name},\n\nvielen Dank für deinen Mitgliedsantrag beim ${verein.name}! Er ist bei uns eingegangen; der Vorstand meldet sich in den nächsten Tagen mit der Aufnahmebestätigung.\n\nBis dahin bist du zum Probetraining jederzeit herzlich willkommen – die Trainingszeiten stehen auf unserer Webseite.\n\nSportliche Grüße\n${verein.name}`
+        : `Hallo ${name},\n\nvielen Dank für deine Nachricht an den ${verein.name}${x.betreff ? ` („${x.betreff}“)` : ''}. Sie ist bei uns eingegangen; wir antworten so schnell wie möglich, meist innerhalb weniger Tage.\n\nSportliche Grüße\n${verein.name}`;
+      await smtp.sendMail({ from: absender, to: x.email, replyTo: verein.email || e.VEREIN_SMTP_ADRESSE, subject: `${art} eingegangen – ${verein.name}`, text });
+      await smtp.sendMail({ from: absender, to: vorstandAdresse, subject: `Neu: ${art}${art === 'Anfrage' ? ` an ${x.an}` : ''}`, text: `Im Vereinsportal ist ein(e) neue(r) ${art} eingegangen. Bitte im Portal unter „Anträge & Anfragen“ bearbeiten.\n\n(Diese E-Mail enthält bewusst keine persönlichen Daten.)` });
+      await d.ref.update({ bestaetigung: 'gesendet' });
+      console.log(`Eingangsbestätigung gesendet: ${sammlung}/${d.id}`);
+    } catch (f) {
+      await d.ref.update({ bestaetigung: 'fehler' });
+      console.error(`Fehler bei ${sammlung}/${d.id}:`, f.message);
+    }
+  }
+}
+
+// ---- Erinnerung an Kündigungsfristen von Verträgen (einmal je Frist) ----
+const plusMonate = (iso, m) => { const [j, mo, t] = iso.split('-').map(Number); const x = new Date(Date.UTC(j, mo - 1 + m, 1)); x.setUTCDate(Math.min(t, new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate())); return x.toISOString().slice(0, 10); };
+const heute = new Date().toISOString().slice(0, 10);
+const datumDe = (iso) => iso.split('-').reverse().join('.');
+for (const d of (await db.collection('vertraege').get()).docs) {
+  const v = d.data();
+  if (v.gekuendigt || !v.ende) continue;
+  let ende = v.ende;
+  if (v.verlaengerung > 0) for (let i = 0; ende < heute && i < 600; i++) ende = plusMonate(ende, v.verlaengerung);
+  if (ende < heute) continue;
+  let bis = plusMonate(ende, -v.kuendigungsfrist);
+  if (bis < heute && v.verlaengerung > 0) bis = plusMonate(plusMonate(ende, v.verlaengerung), -v.kuendigungsfrist);
+  const tage = Math.round((Date.parse(bis) - Date.parse(heute)) / 864e5);
+  if (tage < 0 || tage > (v.erinnerungTage || 60) || v.erinnertFuer === bis) continue;
+  try {
+    await smtp.sendMail({ from: absender, to: vorstandAdresse, subject: `Vertragsfrist: ${v.titel} – kündbar bis ${datumDe(bis)}`,
+      text: `Erinnerung aus dem Vereinsportal:\n\nVertrag: ${v.titel}\nPartner: ${v.partner}\nLaufzeit bis: ${datumDe(ende)}${v.verlaengerung ? ` (verlängert sich sonst um ${v.verlaengerung} Monate)` : ''}\nDie Kündigung muss eingegangen sein bis: ${datumDe(bis)} (in ${tage} Tagen)\n\nBitte im Portal unter „Verträge“ entscheiden: verlängern oder kündigen.` });
+    await d.ref.update({ erinnertFuer: bis });
+    console.log(`Vertragserinnerung gesendet: ${v.titel}`);
+  } catch (f) { console.error(`Fehler Vertragserinnerung ${d.id}:`, f.message); }
+}
+
 for (const d of offen.docs) {
   const m = d.data();
   try {

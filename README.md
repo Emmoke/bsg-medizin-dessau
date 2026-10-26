@@ -31,6 +31,22 @@ Beim ersten Start werden Beispieldaten geladen. Demo-Zugänge (unter `/login` an
   GitHub Pages ist abgeschaltet; `.github/workflows/pruefen.yml` testet und baut nur probehalber.
 - **Firebase Hosting / eigene Domain:** siehe Abschnitt „Hosting & Domain“.
 
+## Übersicht, Aufgaben, Verträge und Vereins-Assistent
+
+- **Übersicht** (`/intern`): „Für dich zu erledigen“ zeigt je nach Rolle alles Offene – neue Anträge, Anfragen, Löschanträge,
+  überfällige Rechnungen (Erinnerung → 1. Mahnung → letzte Mahnung), Vertragsfristen, Bestellungen, fehlgeschlagene E-Mails,
+  Geburtstage, Spiele ohne Ergebnis, eigene Aufgaben. Jeder Punkt und jede Kachel führt per Klick direkt in den Bereich.
+- **Aufgaben** (`/admin/aufgaben`): wer macht was bis wann; zugewiesene Aufgaben sieht die Person in ihrer Übersicht.
+- **Verträge** (`/admin/vertraege`): Laufzeit, Kündigungsfrist, automatische Verlängerung, Kosten/Einnahmen pro Jahr, Excel-Export.
+- **Automatische Rückmeldungen** (bei automatischem E-Mail-Versand): Eingangsbestätigung für Mitgliedsanträge und Anfragen,
+  Hinweis an den Vorstand (ohne Personendaten), Bestellbestätigung, E-Mail an den Vorstand vor jeder Kündigungsfrist.
+- **Vereins-Assistent** (Knopf unten rechts im Portal, Recht `assistent.nutzen`): Lagebild, Chat und Vorschläge, die man
+  per Klick ausführt (Aufgabe, interner Termin, Mitteilung, Rundschreiben ins E-Mail-Center, Zahlungserinnerung/Mahnung).
+  KI: Gemini über Firebase AI Logic – **kostenlos, ohne Schlüssel**. Einmalig einschalten: Firebase-Konsole → *AI Logic* →
+  „Get started“ → **Gemini Developer API**. Die KI bekommt nur anonymisierte Angaben (Anzahlen, Nummern, Beträge, Fristen) –
+  keine Namen, E-Mail-Adressen, Telefonnummern, Anschriften oder Bankdaten (`src/daten/assistent.ts`, getestet).
+  Ohne KI zeigt der Assistent die offenen Punkte aus den eigenen Daten.
+
 ## Testbetrieb und Veröffentlichung
 
 Bis alle Angaben erledigt sind, läuft die Webseite im **Testbetrieb**: Gäste sehen nur eine „Bald online“-Seite mit

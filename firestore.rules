@@ -137,6 +137,15 @@ service cloud.firestore {
     match /finanzbelege/{id} { allow read, write: if darf('finanzen.verwalten'); }
     match /postausgang/{id} { allow read, write: if darf('email.senden') || darf('finanzen.verwalten') || darf('shop.verwalten'); }
 
+    // ---- Organisation: Aufgaben (Verwaltung oder die zuständige Person) und Verträge ----
+    match /aufgaben/{id} {
+      allow read: if darf('aufgaben.verwalten') || (aktiv() && resource.data.zustaendigId == request.auth.uid);
+      allow create, delete: if darf('aufgaben.verwalten');
+      allow update: if darf('aufgaben.verwalten')
+        || (aktiv() && resource.data.zustaendigId == request.auth.uid && nurFelder(['erledigt', 'erledigtAm']));
+    }
+    match /vertraege/{id} { allow read, write: if darf('vertraege.verwalten'); }
+
     // ---- Fanshop: Artikel öffentlich, Bestellungen dürfen Gäste nur anlegen ----
     match /artikel/{id} { allow read: if sichtbar(); allow write: if darf('shop.verwalten'); }
     match /bestellungen/{id} {

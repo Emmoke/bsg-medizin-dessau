@@ -2,8 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Bell, CalendarDays, FileText, UserCircle, Users, ClipboardCheck, Trophy, Camera, Newspaper, Images, Handshake, Building2,
-  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard, Swords, Globe, BookOpen, Wallet, Mail, Megaphone, BarChart3, BadgeCheck, ShieldCheck, ShoppingBag,
+  Shield, ListChecks, Inbox, FolderOpen, UserCog, KeyRound, DatabaseBackup, History, LogOut, Menu, X, ExternalLink, AlertTriangle, IdCard, Swords, Globe, BookOpen, Wallet, Mail, Megaphone, BarChart3, BadgeCheck, ShieldCheck, ShoppingBag, ListTodo, FileSignature,
 } from 'lucide-react';
+import { AufgabenSeite, VertraegeSeite } from './Organisation';
+import { Assistent } from './Assistent';
 import { Link, navigiere, usePfad } from '../router';
 import { speicherFehler, useDaten } from '../daten/speicher';
 import { CLOUD } from '../daten/modus';
@@ -48,6 +50,9 @@ const BEREICHE: { titel: string; eintraege: Eintrag[] }[] = [
   ] },
   { titel: 'Verwaltung', eintraege: [
     { pfad: '/admin', text: 'Dashboard', icon: LayoutDashboard, recht: 'admin.zugang', seite: (p) => <Dashboard {...p} /> },
+    { pfad: '/admin/aufgaben', text: 'Aufgaben', icon: ListTodo, recht: 'aufgaben.verwalten', seite: (p) => <AufgabenSeite {...p} />,
+      zahl: (d, b) => d.aufgaben.filter((a) => !a.erledigt && (a.zustaendigId === b.id || !a.zustaendigId) && !!a.faellig && a.faellig <= new Date().toISOString().slice(0, 10)).length },
+    { pfad: '/admin/vertraege', text: 'Verträge', icon: FileSignature, recht: 'vertraege.verwalten', seite: (p) => <VertraegeSeite {...p} /> },
     { pfad: '/admin/finanzen', text: 'Finanzen & Kasse', icon: Wallet, recht: 'finanzen.verwalten', seite: (p) => <Finanzen {...p} />, zahl: (d) => d.finanzbelege.filter((b) => b.typ === 'rechnung' && b.status === 'offen' && !!b.faellig && b.faellig < new Date().toISOString().slice(0, 10)).length },
     { pfad: '/admin/shop', text: 'Fanshop', icon: ShoppingBag, recht: 'shop.verwalten', seite: (p) => <ShopVerwaltung {...p} />, zahl: (d) => d.bestellungen.filter((b) => b.status === 'neu').length },
     { pfad: '/admin/email', text: 'E-Mail & Rundschreiben', icon: Mail, recht: 'email.senden', seite: (p) => <EmailCenter {...p} /> },
@@ -176,6 +181,7 @@ export function Portal({ pfad }: { pfad: string }) {
         {speicherFehler && <p className="mb-5 rounded-xl bg-rose-50 px-4 py-2.5 text-sm text-rose-800 ring-1 ring-rose-200">{speicherFehler}</p>}
         {erlaubt ? eintrag!.seite({ d, b }) : <Leer titel={eintrag ? 'Kein Zugriff' : 'Seite nicht gefunden'} text={eintrag ? 'Für diesen Bereich fehlt deiner Rolle das Recht. Wende dich an den Administrator.' : undefined} aktion={<Link to="/intern" className="text-primaer underline">Zur Übersicht</Link>} />}
       </main>
+      {hatRecht(b, 'assistent.nutzen', d) && <Assistent d={d} b={b} />}
     </div>
   );
 }

@@ -1,13 +1,16 @@
 // Mitgliederbereich: Übersicht (mit Spielzusage), interne Mitteilungen, Termine, Dokumente und eigenes Profil.
-import { useState } from 'react';
-import { Bell, CalendarDays, FileText, Trophy, Check, X, HelpCircle, Download, Send, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, CalendarDays, FileText, Trophy, Check, X, HelpCircle, Download, Send, AlertCircle, ChevronRight, IdCard, Wallet, ShoppingBag, Mail, ListTodo, FileSignature, Newspaper, ShieldCheck, Bot, UserCircle, Shield, LayoutDashboard, Globe } from 'lucide-react';
 import { Link } from '../router';
 import { aktualisieren, hinzufuegen, jetztIso, neueId } from '../daten/speicher';
 import { eigenesPasswortSetzen, passwortPruefen } from '../daten/anmeldung';
-import { hatRecht } from '../daten/rechte';
-import { alsDatum, datumKurz, naechsteSpiele, paarung, uhrzeit } from '../daten/auswertung';
+import { hatRecht, type Recht } from '../daten/rechte';
+import { alsDatum, datumKurz, naechsteSpiele, paarung, tagIso, uhrzeit } from '../daten/auswertung';
+import { eur, kontostand, summe } from '../daten/finanzen';
+import { lagebild, naechsteKuendigung, type Bereich } from '../daten/lage';
+import { assistentOeffnen } from './Assistent';
 import type { Benutzer, Datenbestand, Sichtbarkeit, Zusage } from '../daten/typen';
-import { Auswahl, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
+import { Auswahl, Eingabe, Feld, Karte, Knopf, Kopf, Leer, Marke, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import { Veranstaltungen } from '../oeffentlich/Inhalte';
 import { sichtbareMitteilung, type SeitenProps } from './Portal';
 import { ZweiFaktorKarte, braucht2FA } from './ZweiFaktor';
@@ -29,30 +32,76 @@ function ZusageKnoepfe({ d, b, spielId }: { d: Datenbestand; b: Benutzer; spielI
   return <div className="mt-3 flex flex-wrap gap-2">{knopf('ja', 'Bin dabei', Check, 'bg-emerald-600')}{knopf('vielleicht', 'Vielleicht', HelpCircle, 'bg-amber-500')}{knopf('nein', 'Absage', X, 'bg-rose-600')}</div>;
 }
 
+const BEREICH_ICON: Record<Bereich, typeof Bell> = { mitglieder: IdCard, finanzen: Wallet, shop: ShoppingBag, email: Mail, aufgaben: ListTodo, vertraege: FileSignature, spiele: Trophy, inhalte: Newspaper, sicherheit: ShieldCheck, intern: Bell };
+
+/** Kachel, die per Klick direkt in den Bereich führt */
+function KachelLink({ zu, titel, wert, unter, icon: Icon, ton }: { zu: string; titel: string; wert: React.ReactNode; unter?: string; icon: typeof Bell; ton: 'rot' | 'gruen' | 'blau' | 'lila' | 'gelb' | 'grau' }) {
+  const farbe = { rot: 'bg-rose-50 text-rose-700', gruen: 'bg-emerald-50 text-emerald-700', blau: 'bg-blue-50 text-blue-700', lila: 'bg-violet-50 text-violet-700', gelb: 'bg-amber-50 text-amber-800', grau: 'bg-slate-100 text-slate-600' }[ton];
+  return (
+    <Link to={zu} className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-primaer/40 hover:shadow-md">
+      <div className="flex items-center justify-between"><span className="text-sm text-slate-500">{titel}</span><span className={`rounded-lg p-1.5 ${farbe}`}><Icon className="h-4 w-4" /></span></div>
+      <div className="zahlen mt-2 text-[26px] font-bold leading-none tracking-tight text-slate-900">{wert}</div>
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-slate-500"><span className="truncate">{unter}</span><ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-primaer" /></div>
+    </Link>
+  );
+}
+
 export function Uebersicht({ d, b }: SeitenProps) {
+  const heute = tagIso(new Date());
+  const darf = (r: Recht) => hatRecht(b, r, d);
   const mitteilungen = d.mitteilungen.filter((m) => sichtbareMitteilung(m.an, b)).sort((x, y) => y.datum.localeCompare(x.datum));
   const ungelesen = mitteilungen.filter((m) => !m.gelesenVon.includes(b.id));
   const termine = d.termine.filter((t) => alsDatum(t.beginn) >= new Date()).sort((x, y) => x.beginn.localeCompare(y.beginn)).slice(0, 4);
   const meineSpiele = naechsteSpiele(d.spiele.filter((s) => b.mannschaftIds.includes(s.mannschaftId)), new Date(), 3);
   const dokumente = d.dokumente.filter((x) => darfDokument(x.sichtbar, b) && x.sichtbar !== 'oeffentlich').length;
+  const lage = lagebild(d, b, heute, darf);
+  const wichtig = lage.filter((x) => x.stufe === 'wichtig').length;
   const stunde = new Date().getHours();
+  // Kennzahlen für die Verwaltung – nur, was die Rolle sehen darf
+  const fin = d.verein.finanzen;
+  const offeneRechnungen = d.finanzbelege.filter((f) => f.typ === 'rechnung' && f.status === 'offen');
+  const kuendigung = naechsteKuendigung(d, heute);
+  const meineAufgaben = d.aufgaben.filter((a) => !a.erledigt && (a.zustaendigId === b.id || (!a.zustaendigId && darf('aufgaben.verwalten'))));
+  const verwaltung = [
+    darf('mitglieder.verwalten') && <KachelLink key="m" zu="/admin/mitglieder" titel="Mitglieder" wert={d.mitglieder.filter((m) => m.status !== 'ausgetreten').length} unter={`${d.antraege.filter((a) => a.status === 'neu').length} neue Anträge`} icon={IdCard} ton="blau" />,
+    darf('finanzen.verwalten') && <KachelLink key="k" zu="/admin/finanzen" titel="Kasse + Bank" wert={eur(kontostand(d.buchungen, 'kasse', fin?.anfangsbestandKasse ?? 0) + kontostand(d.buchungen, 'bank', fin?.anfangsbestandBank ?? 0))} unter={`${offeneRechnungen.length} offene Rechnungen · ${eur(offeneRechnungen.reduce((s, f) => s + summe(f), 0))}`} icon={Wallet} ton="gruen" />,
+    darf('aufgaben.verwalten') && <KachelLink key="a" zu="/admin/aufgaben" titel="Meine Aufgaben" wert={meineAufgaben.length} unter={meineAufgaben.some((a) => a.faellig && a.faellig < heute) ? 'davon überfällige' : 'offen'} icon={ListTodo} ton={meineAufgaben.some((a) => a.faellig && a.faellig < heute) ? 'rot' : 'grau'} />,
+    darf('vertraege.verwalten') && <KachelLink key="v" zu="/admin/vertraege" titel="Verträge" wert={d.vertraege.filter((v) => !v.gekuendigt).length} unter={kuendigung ? `nächste Frist ${datumKurz(kuendigung.bis).slice(4)}: ${kuendigung.titel}` : 'keine Fristen'} icon={FileSignature} ton="lila" />,
+    darf('shop.verwalten') && <KachelLink key="s" zu="/admin/shop" titel="Fanshop" wert={d.bestellungen.filter((x) => x.status === 'neu' || x.status === 'bezahlt').length} unter="offene Bestellungen" icon={ShoppingBag} ton="gelb" />,
+  ].filter(Boolean);
   return (
     <>
-      <Kopf titel={`${stunde < 11 ? 'Guten Morgen' : stunde < 18 ? 'Hallo' : 'Guten Abend'}, ${b.vorname}!`} beschreibung={`Willkommen im Vereinsportal der ${d.verein.kurzname}.`} />
+      <Kopf titel={`${stunde < 11 ? 'Guten Morgen' : stunde < 18 ? 'Hallo' : 'Guten Abend'}, ${b.vorname}!`} beschreibung={`${new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })} · Vereinsportal der ${d.verein.kurzname}`}
+        aktionen={darf('assistent.nutzen') ? <Knopf art="primaer" onClick={() => assistentOeffnen()}><Bot className="h-4 w-4" />Assistent fragen</Knopf> : undefined} />
+
+      <Karte className="mb-6" titel={<span className="flex items-center gap-2"><ListTodo className="h-4 w-4 text-primaer" />Für dich zu erledigen{wichtig > 0 && <Marke ton="rot">{wichtig} wichtig</Marke>}</span>} innen={false}>
+        <ul className="divide-y divide-slate-100">{lage.slice(0, 10).map((x, i) => {
+          const Icon = BEREICH_ICON[x.bereich];
+          return (
+            <li key={i}><Link to={x.link} className="flex items-center gap-3 px-5 py-3 transition hover:bg-slate-50">
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${x.stufe === 'wichtig' ? 'bg-rose-50 text-rose-600' : x.stufe === 'hinweis' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-600'}`}>{x.stufe === 'ok' ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}</span>
+              <span className={`min-w-0 flex-1 text-[15px] ${x.stufe === 'wichtig' ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>{x.text}</span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
+            </Link></li>
+          );
+        })}</ul>
+      </Karte>
+
+      {verwaltung.length > 0 && <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">{verwaltung}</div>}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kachel titel="Ungelesene Mitteilungen" wert={ungelesen.length} icon={<Bell className="h-4 w-4" />} ton={ungelesen.length ? 'rot' : 'grau'} />
-        <Kachel titel="Nächste Termine" wert={termine.length} icon={<CalendarDays className="h-4 w-4" />} unter={termine[0] ? `${datumKurz(termine[0].beginn)}: ${termine[0].titel}` : undefined} />
-        <Kachel titel="Meine Spiele" wert={meineSpiele.length} icon={<Trophy className="h-4 w-4" />} ton="gruen" />
-        <Kachel titel="Dokumente für dich" wert={dokumente} icon={<FileText className="h-4 w-4" />} ton="lila" />
+        <KachelLink zu="/intern/mitteilungen" titel="Ungelesene Mitteilungen" wert={ungelesen.length} unter={ungelesen[0]?.titel} icon={Bell} ton={ungelesen.length ? 'rot' : 'grau'} />
+        <KachelLink zu="/intern/termine" titel="Nächste Termine" wert={termine.length} unter={termine[0] ? `${datumKurz(termine[0].beginn)}: ${termine[0].titel}` : undefined} icon={CalendarDays} ton="blau" />
+        <KachelLink zu={b.rolle === 'trainer' ? '/trainer/spiele' : '/spielbetrieb/spielplan'} titel="Meine Spiele" wert={meineSpiele.length} unter={meineSpiele[0] ? datumKurz(meineSpiele[0].datum) : 'keine angesetzt'} icon={Trophy} ton="gruen" />
+        <KachelLink zu="/intern/dokumente" titel="Dokumente für dich" wert={dokumente} unter="Satzung, Formulare, Pläne" icon={FileText} ton="lila" />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Karte titel="Mitteilungen" aktionen={<Link to="/intern/mitteilungen" className="text-sm font-semibold text-primaer">Alle</Link>}>
           {mitteilungen.length ? <ul className="space-y-3">{mitteilungen.slice(0, 4).map((m) => (
-            <li key={m.id} className={`rounded-xl p-3 ${m.gelesenVon.includes(b.id) ? 'bg-slate-50' : 'bg-primaer/5 ring-1 ring-primaer/20'}`}>
+            <li key={m.id}><Link to="/intern/mitteilungen" className={`block rounded-xl p-3 transition hover:ring-1 hover:ring-primaer/30 ${m.gelesenVon.includes(b.id) ? 'bg-slate-50' : 'bg-primaer/5 ring-1 ring-primaer/20'}`}>
               <p className="flex items-center gap-2 font-semibold">{m.wichtig && <AlertCircle className="h-4 w-4 text-rose-600" />}{m.titel}</p>
               <p className="line-clamp-2 text-sm text-slate-600">{m.text}</p>
               <p className="mt-1 text-xs text-slate-400">{datumKurz(m.datum)} · {m.autor}</p>
-            </li>))}</ul> : <Leer titel="Keine Mitteilungen" />}
+            </Link></li>))}</ul> : <Leer titel="Keine Mitteilungen" />}
         </Karte>
         <Karte titel="Meine nächsten Spiele">
           {meineSpiele.length ? <ul className="space-y-4">{meineSpiele.map((s) => {
@@ -69,12 +118,18 @@ export function Uebersicht({ d, b }: SeitenProps) {
           })}</ul> : <Leer titel="Keine Spiele" text="Du bist keiner Mannschaft zugeordnet oder es stehen keine Spiele an." />}
         </Karte>
         <Karte titel="Termine" aktionen={<Link to="/intern/termine" className="text-sm font-semibold text-primaer">Kalender</Link>}>
-          <ul className="divide-y divide-slate-100">{termine.map((t) => <li key={t.id} className="flex items-center justify-between gap-3 py-2.5"><span><span className="block font-medium">{t.titel}</span><span className="text-xs text-slate-500">{datumKurz(t.beginn)} {uhrzeit(t.beginn)} · {t.ort}</span></span>{!t.oeffentlich && <Marke ton="lila">intern</Marke>}</li>)}</ul>
+          {termine.length ? <ul className="divide-y divide-slate-100">{termine.map((t) => <li key={t.id}><Link to="/intern/termine" className="flex items-center justify-between gap-3 rounded-lg py-2.5 hover:bg-slate-50"><span><span className="block font-medium">{t.titel}</span><span className="text-xs text-slate-500">{datumKurz(t.beginn)} {uhrzeit(t.beginn)} · {t.ort}</span></span>{!t.oeffentlich && <Marke ton="lila">intern</Marke>}</Link></li>)}</ul> : <Leer titel="Keine Termine" />}
         </Karte>
         <Karte titel="Schnellzugriff">
-          <div className="grid grid-cols-2 gap-3">
-            {[['Dokumente', '/intern/dokumente'], ['Mein Profil', '/intern/profil'], ...(hatRecht(b, 'trainer.zugang', d) ? [['Trainerbereich', '/trainer']] : []), ...(hatRecht(b, 'admin.zugang', d) ? [['Verwaltung', '/admin']] : []), ['Spielplan', '/spielbetrieb/spielplan'], ['Zur Webseite', '/']].map(([t, z]) => (
-              <Link key={z} to={z} className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-primaer/5 hover:text-primaer">{t}</Link>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {([
+              [UserCircle, 'Mein Profil', '/intern/profil', true], [FileText, 'Dokumente', '/intern/dokumente', true],
+              [Shield, 'Trainerbereich', '/trainer', darf('trainer.zugang')], [LayoutDashboard, 'Verwaltung', '/admin', darf('admin.zugang')],
+              [Wallet, 'Finanzen', '/admin/finanzen', darf('finanzen.verwalten')], [Mail, 'E-Mail', '/admin/email', darf('email.senden')],
+              [IdCard, 'Mitglieder', '/admin/mitglieder', darf('mitglieder.verwalten')], [ListTodo, 'Aufgaben', '/admin/aufgaben', darf('aufgaben.verwalten')],
+              [FileSignature, 'Verträge', '/admin/vertraege', darf('vertraege.verwalten')], [Trophy, 'Spielplan', '/spielbetrieb/spielplan', true], [Globe, 'Zur Webseite', '/', true],
+            ] as [typeof Bell, string, string, boolean][]).filter(([, , , ok]) => ok).map(([Icon, t, z]) => (
+              <Link key={z} to={z} className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-primaer/5 hover:text-primaer"><Icon className="h-4 w-4 shrink-0" />{t}</Link>
             ))}
           </div>
         </Karte>

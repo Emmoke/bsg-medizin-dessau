@@ -39,6 +39,9 @@ Bei der Registrierung im Mitgliederbereich speichern wir Name, E-Mail-Adresse un
 § 12. Speicher im Browser und Einwilligung
 Wir speichern im Browser nur, was technisch notwendig ist (§ 25 Abs. 2 TDDDG): Anmeldung, Warenkorb, Ihre Auswahl im Hinweisfenster. Externe Inhalte (z. B. YouTube-Videos) laden wir erst nach Ihrer Einwilligung (§ 25 Abs. 1 TDDDG, Art. 6 Abs. 1 lit. a DSGVO); die Auswahl können Sie jederzeit über „Cookie-Einstellungen“ am Seitenende ändern. Zum Schutz vor Missbrauch der Formulare kann Google reCAPTCHA über Firebase App Check eingesetzt werden (Art. 6 Abs. 1 lit. f DSGVO).
 
+§ 12a. Assistent im Verwaltungsbereich
+Der Vorstand kann im internen Verwaltungsbereich einen KI-Assistenten (Google Gemini über Firebase AI Logic) nutzen, der bei der Organisation hilft. Dabei werden keine Namen, E-Mail-Adressen, Telefonnummern, Anschriften oder Bankdaten übermittelt – nur anonymisierte Angaben wie Anzahlen, Rechnungsnummern, Beträge und Fristen. Vorschläge des Assistenten führt der Vorstand selbst aus.
+
 § 13. Ihre Rechte
 Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20), Widerspruch (Art. 21 DSGVO) und Widerruf von Einwilligungen (Art. 7 Abs. 3). Eine formlose E-Mail an ${v.email} genügt. Angemeldete Mitglieder können ihre Daten im Profil selbst herunterladen.
 

@@ -30,6 +30,9 @@ export const RECHTE = {
   'finanzen.verwalten': 'Finanzen: Kasse, Rechnungen, Spendenbescheinigungen',
   'werbung.erstellen': 'Werbung und Social-Media-Beiträge erstellen',
   'shop.verwalten': 'Fanshop: Artikel und Bestellungen',
+  'vertraege.verwalten': 'Verträge mit Laufzeiten und Kündigungsfristen',
+  'aufgaben.verwalten': 'Aufgaben für den Vorstand anlegen und verteilen',
+  'assistent.nutzen': 'Vereins-Assistent (KI) nutzen',
   'statistik.sehen': 'Statistiken und Auswertungen',
   'benutzer.verwalten': 'Benutzer anlegen und Rollen vergeben',
   'rechte.verwalten': 'Rechte der Rollen ändern',
@@ -42,7 +45,7 @@ export const STANDARD_RECHTE: Record<Rolle, Recht[]> = {
   admin: ALLE_RECHTE,
   vorstand: ['intern.zugang', 'trainer.zugang', 'admin.zugang', 'news.verwalten', 'termine.verwalten', 'medien.verwalten', 'mannschaften.verwalten',
     'spiele.verwalten', 'sponsoren.verwalten', 'verein.verwalten', 'mitglieder.verwalten', 'formulare.verwalten', 'dokumente.verwalten',
-    'mitteilungen.senden', 'statistik.sehen', 'email.senden', 'finanzen.verwalten', 'werbung.erstellen', 'shop.verwalten'],
+    'mitteilungen.senden', 'statistik.sehen', 'email.senden', 'finanzen.verwalten', 'werbung.erstellen', 'shop.verwalten', 'vertraege.verwalten', 'aufgaben.verwalten', 'assistent.nutzen'],
   trainer: ['intern.zugang', 'trainer.zugang', 'mitteilungen.senden'],
   redakteur: ['intern.zugang', 'admin.zugang', 'news.verwalten', 'termine.verwalten', 'medien.verwalten', 'werbung.erstellen'],
   mitglied: ['intern.zugang'],
@@ -71,8 +74,8 @@ export function rollenName(rolle: Rolle): string {
 }
 
 /** Version der Rechte-Liste: bei neuen Rechten erhöhen, damit gespeicherte Vereine sie für ihre Rollen nachträglich bekommen */
-export const RECHTE_VERSION = 3;
-const NEU_IN: Record<number, Recht[]> = { 2: ['email.senden', 'finanzen.verwalten', 'werbung.erstellen'], 3: ['shop.verwalten'] };
+export const RECHTE_VERSION = 4;
+const NEU_IN: Record<number, Recht[]> = { 2: ['email.senden', 'finanzen.verwalten', 'werbung.erstellen'], 3: ['shop.verwalten'], 4: ['vertraege.verwalten', 'aufgaben.verwalten', 'assistent.nutzen'] };
 
 /** Neue Rechte (seit der gespeicherten Version) den Rollen geben, die sie standardmäßig haben */
 export function rechteErgaenzen(rechte: Record<Rolle, Recht[]>, version = 1): Record<Rolle, Recht[]> {

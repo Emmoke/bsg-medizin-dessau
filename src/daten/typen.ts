@@ -294,13 +294,38 @@ export interface Antrag {
   kontoinhaber?: string; iban?: string; sepa: boolean;
   /** Maskierte IBAN zur Anzeige für den Vorstand, z. B. "DE02 •••• 2051" */
   ibanMaskiert?: string;
+  /** Automatische Eingangsbestätigung per E-Mail ("offen" → der E-Mail-Job verschickt sie) */
+  bestaetigung?: 'offen' | 'gesendet' | 'fehler';
   fotoFreigabe: boolean; notiz?: string;
+}
+
+/** Aufgabe im Vorstand (auch vom Assistenten vorgeschlagen): wer macht was bis wann */
+export interface Aufgabe {
+  id: string; titel: string; notiz?: string; faellig?: string; zustaendigId?: string;
+  /** Bereich im Portal, zu dem die Aufgabe führt, z. B. "/admin/finanzen" */
+  link?: string;
+  prio: 'hoch' | 'normal'; erledigt: boolean; erledigtAm?: string; erstellt: string; von: string;
+}
+
+/** Vertrag des Vereins mit Laufzeit, Kündigungsfrist und Kosten – Erinnerung vor Fristende */
+export type Vertragsart = 'Hallenmiete' | 'Versicherung' | 'Verband' | 'Sponsoring' | 'Übungsleiter' | 'Software & Internet' | 'Bank' | 'Sonstiges';
+export interface Vertrag {
+  id: string; titel: string; partner: string; art: Vertragsart; vertragsnummer?: string;
+  beginn: string; ende?: string;
+  /** Kündigungsfrist in Monaten zum Laufzeitende */
+  kuendigungsfrist: number;
+  /** Verlängert sich automatisch um so viele Monate (0 = endet) */
+  verlaengerung: number;
+  betrag: number; intervall: 'monatlich' | 'vierteljährlich' | 'jährlich' | 'einmalig'; richtung: 'ausgabe' | 'einnahme';
+  ansprechpartner?: string; notiz?: string; dokumentId?: string;
+  /** Wie viele Tage vor Ablauf der Kündigungsfrist erinnert wird */
+  erinnerungTage: number; erinnertFuer?: string; gekuendigt?: boolean;
 }
 
 /** SEPA-Bankverbindung aus dem Mitgliedsantrag – eigene Sammlung, lesbar nur mit "finanzen.verwalten" */
 export interface Bankdaten { id: string; antragId: string; mitgliedId?: string; kontoinhaber: string; iban: string; datum: string; mandat: boolean }
 
-export interface Anfrage { id: string; datum: string; name: string; email: string; betreff: string; nachricht: string; an: string; status: 'neu' | 'beantwortet' | 'archiviert' }
+export interface Anfrage { id: string; datum: string; name: string; email: string; betreff: string; nachricht: string; an: string; status: 'neu' | 'beantwortet' | 'archiviert'; bestaetigung?: 'offen' | 'gesendet' | 'fehler' }
 export interface Protokolleintrag { id: string; zeit: string; wer: string; aktion: string }
 
 export interface Datenbestand {
@@ -322,6 +347,8 @@ export interface Datenbestand {
   antraege: Antrag[];
   bankdaten: Bankdaten[];
   anfragen: Anfrage[];
+  aufgaben: Aufgabe[];
+  vertraege: Vertrag[];
   gaestebuch: Gaestebucheintrag[];
   gegner: Gegnerverein[];
   buchungen: Buchung[];

@@ -6,13 +6,41 @@ import { aktualisieren, entfernen, hinzufuegen, neueId, speichereEintrag, verein
 import { datumKurz, ibanGueltig, tagIso } from '../daten/auswertung';
 import { KATEGORIEN, SPHAEREN, beitragslauf, eur, jahresauswertung, kontostand, naechsteNummer, summe, ueberfaellig } from '../daten/finanzen';
 import { pdfAlsDaten, pdfHerunterladen } from '../daten/pdf';
-import type { Buchung, Finanzbeleg, Finanzeinstellungen, Position } from '../daten/typen';
+import type { Benutzer, Buchung, Finanzbeleg, Finanzeinstellungen, Position, Verein } from '../daten/typen';
 import { Auswahl, BildWahl, Dialog, Eingabe, Feld, Kachel, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import type { SeitenProps } from './Portal';
 import { emailSenden } from './Email';
 
 type Bereich = 'uebersicht' | 'kasse' | 'rechnung' | 'angebot' | 'spende' | 'beitraege' | 'einstellungen';
-const STANDARD: Finanzeinstellungen = { kontoinhaber: '', iban: '', bescheidArt: 'freistellung', zweck: 'Förderung des Sports', zahlungsziel: 14, anfangsbestandKasse: 0, anfangsbestandBank: 0 };
+/** Mahnstufen: 0 → Zahlungserinnerung, 1 → 1. Mahnung, ab 2 → letzte Mahnung */
+export const MAHNSTUFE = ['Zahlungserinnerung', '1. Mahnung', 'Letzte Mahnung'];
+
+/**
+ * Beleg (Rechnung, Angebot, Spendenbescheinigung) oder Zahlungserinnerung/Mahnung mit PDF per E-Mail senden.
+ * Erhöht bei Erinnerungen die Mahnstufe. Wird auch vom Vereins-Assistenten genutzt. Gibt true zurück, wenn gesendet.
+ */
+export async function belegPerEmail(x: Finanzbeleg, art: 'beleg' | 'erinnerung', verein: Verein, ich: Pick<Benutzer, 'vorname' | 'nachname'>): Promise<boolean> {
+  if (!x.empfaenger.email) { hinweis('Beim Empfänger ist keine E-Mail-Adresse eingetragen', 'fehler'); return false; }
+  const stufe = Math.min(x.mahnstufe ?? 0, 2);
+  const art2 = MAHNSTUFE[stufe];
+  const anhang = { name: `${art === 'erinnerung' ? art2.replace(/\W+/g, '_') : TYP_TEXT[x.typ]}_${x.nummer}.pdf`, daten: await pdfAlsDaten(x, verein, art) };
+  const titel = art === 'erinnerung' ? `${art2} zu ${x.nummer}` : `${TYP_TEXT[x.typ]} ${x.nummer}`;
+  const frist = new Date(Date.now() + (stufe ? 10 : 14) * 864e5).toLocaleDateString('de-DE');
+  const gruss = `Mit sportlichen Grüßen\n${ich.vorname} ${ich.nachname}\n${verein.name}`;
+  const text = art === 'beleg'
+    ? `Guten Tag ${x.empfaenger.name},\n\nanbei erhalten Sie ${x.typ === 'spende' ? 'Ihre Spendenbescheinigung' : `unser${x.typ === 'rechnung' ? 'e Rechnung' : ' Angebot'}`} ${x.nummer} als PDF.\n\nVielen Dank!\n\n${gruss}`
+    : stufe === 0
+      ? `Guten Tag ${x.empfaenger.name},\n\nfür die Rechnung ${x.nummer} über ${eur(summe(x))} konnten wir noch keinen Zahlungseingang feststellen. Vielleicht ist es einfach untergegangen – die Zahlungserinnerung liegt als PDF bei. Bitte überweisen Sie den Betrag bis zum ${frist}.\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht bitte als gegenstandslos.\n\n${gruss}`
+      : `Guten Tag ${x.empfaenger.name},\n\nleider ist die Rechnung ${x.nummer} über ${eur(summe(x))} trotz unserer Erinnerung weiterhin offen. Wir bitten Sie, den Betrag bis spätestens ${frist} zu überweisen.${stufe >= 2 ? ' Sollte bis dahin kein Zahlungseingang erfolgen, müssen wir den Vorgang an den Vorstand zur weiteren Klärung übergeben.' : ''}\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht bitte als gegenstandslos. Bei Fragen oder Schwierigkeiten melden Sie sich gern – wir finden eine Lösung.\n\n${gruss}`;
+  const ok = await emailSenden({ an: [{ name: x.empfaenger.name, email: x.empfaenger.email }], betreff: titel, text, anhang, art: art === 'erinnerung' ? art2 : TYP_TEXT[x.typ], autor: `${ich.vorname} ${ich.nachname}` });
+  if (ok) {
+    if (art === 'erinnerung') aktualisieren('finanzbelege', x.id, { mahnstufe: (x.mahnstufe ?? 0) + 1 }, `${art2} ${x.nummer}`);
+    else if (x.status === 'entwurf') aktualisieren('finanzbelege', x.id, { status: 'offen' });
+  }
+  return ok;
+}
+
+const STANDARD: Finanzeinstellungen ={ kontoinhaber: '', iban: '', bescheidArt: 'freistellung', zweck: 'Förderung des Sports', zahlungsziel: 14, anfangsbestandKasse: 0, anfangsbestandBank: 0 };
 const STATUS_TON = { entwurf: 'grau', offen: 'gelb', bezahlt: 'gruen', storniert: 'rot', angenommen: 'gruen', abgelehnt: 'rot' } as const;
 
 export function Finanzen(p: SeitenProps) {
@@ -164,20 +192,8 @@ function Belegliste({ d, b: ich, typ }: SeitenProps & { typ: Finanzbeleg['typ'] 
     hinweis('Als bezahlt markiert und im Kassenbuch gebucht');
   };
   const senden = async (x: Finanzbeleg, art: 'beleg' | 'erinnerung') => {
-    if (!x.empfaenger.email) return hinweis('Beim Empfänger ist keine E-Mail-Adresse eingetragen', 'fehler');
     setLaedt(x.id);
-    try {
-      const anhang = { name: `${art === 'erinnerung' ? 'Zahlungserinnerung' : TYP_TEXT[x.typ]}_${x.nummer}.pdf`, daten: await pdfAlsDaten(x, d.verein, art) };
-      const titel = art === 'erinnerung' ? `Zahlungserinnerung zu ${x.nummer}` : `${TYP_TEXT[x.typ]} ${x.nummer}`;
-      const text = art === 'erinnerung'
-        ? `Guten Tag ${x.empfaenger.name},\n\nfür die Rechnung ${x.nummer} über ${eur(summe(x))} konnten wir noch keinen Zahlungseingang feststellen. Die Zahlungserinnerung liegt als PDF bei.\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht bitte als gegenstandslos.\n\nMit sportlichen Grüßen\n${ich.vorname} ${ich.nachname}\n${d.verein.name}`
-        : `Guten Tag ${x.empfaenger.name},\n\nanbei erhalten Sie ${x.typ === 'spende' ? 'Ihre Spendenbescheinigung' : `unser${x.typ === 'rechnung' ? 'e Rechnung' : ' Angebot'}`} ${x.nummer} als PDF.\n\nVielen Dank!\n\nMit sportlichen Grüßen\n${ich.vorname} ${ich.nachname}\n${d.verein.name}`;
-      const ok = await emailSenden({ an: [{ name: x.empfaenger.name, email: x.empfaenger.email }], betreff: titel, text, anhang, art: art === 'erinnerung' ? 'Zahlungserinnerung' : TYP_TEXT[x.typ], autor: `${ich.vorname} ${ich.nachname}` });
-      if (ok) {
-        if (art === 'erinnerung') aktualisieren('finanzbelege', x.id, { mahnstufe: (x.mahnstufe ?? 0) + 1 }, `Zahlungserinnerung ${x.nummer}`);
-        else if (x.status === 'entwurf') aktualisieren('finanzbelege', x.id, { status: 'offen' });
-      }
-    } finally { setLaedt(''); }
+    try { await belegPerEmail(x, art, d.verein, ich); } finally { setLaedt(''); }
   };
   const heute = tagIso(new Date());
   return (
@@ -192,7 +208,7 @@ function Belegliste({ d, b: ich, typ }: SeitenProps & { typ: Finanzbeleg['typ'] 
             <span className="flex flex-wrap gap-1">
               <Knopf klein onClick={() => pdfHerunterladen(x, d.verein)}><FileDown className="h-4 w-4" />PDF</Knopf>
               <Knopf klein laedt={laedt === x.id} onClick={() => senden(x, 'beleg')}><Mail className="h-4 w-4" />Senden</Knopf>
-              {typ === 'rechnung' && x.status === 'offen' && <><Knopf klein onClick={() => senden(x, 'erinnerung')}><Repeat className="h-4 w-4" />Erinnern</Knopf><Knopf klein onClick={() => bezahlt(x)}><CheckCircle2 className="h-4 w-4" />Bezahlt</Knopf></>}
+              {typ === 'rechnung' && x.status === 'offen' && <><Knopf klein onClick={() => senden(x, 'erinnerung')}><Repeat className="h-4 w-4" />{MAHNSTUFE[Math.min(x.mahnstufe ?? 0, 2)]}</Knopf><Knopf klein onClick={() => bezahlt(x)}><CheckCircle2 className="h-4 w-4" />Bezahlt</Knopf></>}
               {typ === 'angebot' && x.status !== 'angenommen' && <Knopf klein onClick={() => {
                 aktualisieren('finanzbelege', x.id, { status: 'angenommen' });
                 hinzufuegen('finanzbelege', { ...x, id: neueId('fb'), typ: 'rechnung', nummer: naechsteNummer(d.finanzbelege, 'rechnung'), datum: heute, status: 'entwurf', einleitung: undefined }, `Angebot ${x.nummer} angenommen → Rechnung`);

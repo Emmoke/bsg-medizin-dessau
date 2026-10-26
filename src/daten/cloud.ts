@@ -15,7 +15,7 @@ import type { Benutzer, Datenbestand, Mitglied, Sammlung, Verein } from './typen
 
 export const SAMMLUNGEN: Sammlung[] = ['mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente',
   'gaestebuch', 'benutzer', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen', 'protokoll', 'buchungen', 'finanzbelege', 'postausgang',
-  'artikel', 'bestellungen', 'bankdaten'];
+  'artikel', 'bestellungen', 'bankdaten', 'aufgaben', 'vertraege'];
 
 /** Filter je Sammlung: null = nicht lesbar, [] = alles, sonst Bedingung [Feld, Operator, Wert] */
 type Bedingung = null | [] | [string, '==' | 'in', unknown];
@@ -44,6 +44,9 @@ function filter(s: Sammlung, b: Benutzer | null, v: Verein): Bedingung {
       return !benutzerNurEigenes && (recht('benutzer.verwalten') || recht('mannschaften.verwalten') || recht('email.senden') || recht('verein.verwalten')) ? [] : ['id', '==', uid];
     case 'mitteilungen': case 'trainings': return b ? [] : null;
     case 'bankdaten': return recht('finanzen.verwalten') ? [] : null;
+    // Aufgaben: Verwaltung sieht alle, alle anderen nur die ihnen zugewiesenen
+    case 'aufgaben': return !b ? null : recht('aufgaben.verwalten') ? [] : ['zustaendigId', '==', b.id];
+    case 'vertraege': return recht('vertraege.verwalten') ? [] : null;
     case 'mitglieder': return recht('mitglieder.verwalten') ? [] : null;
     case 'antraege': case 'anfragen': return recht('formulare.verwalten') ? [] : null;
     case 'protokoll': return recht('statistik.sehen') ? [] : null;

@@ -380,6 +380,15 @@ export function beispielDaten(): Datenbestand {
       { id: 'a1', datum: zeitpunkt(-1, '20:14'), status: 'neu', vorname: 'Emil', nachname: 'Beispiel', geburtsdatum: '2010-05-12', strasse: 'Musterweg 3', plz: '06847', ort: 'Dessau-Roßlau',
         email: 'familie.beispiel@example.com', abteilung: 'Sportschießen Jugend (ab 14)', beitragId: 'b2', erziehungsberechtigter: 'Jana Beispiel', ibanMaskiert: 'DE02 •••• 2051', sepa: true, fotoFreigabe: true, notiz: 'Beispielantrag' },
     ],
+    // Organisation: Beispiel-Aufgaben und -Verträge (im Admin anpassen oder löschen)
+    aufgaben: [
+      { id: 'auf1', titel: 'Hallenzeiten für die neue Saison beantragen (Beispiel)', faellig: zeitpunkt(5).slice(0, 10), prio: 'hoch', erledigt: false, erstellt: zeitpunkt(-3), von: 'Vorstand', link: '/admin/vertraege' },
+      { id: 'auf2', titel: 'Freistellungsbescheid in den Finanzen hinterlegen (Beispiel)', faellig: zeitpunkt(-1).slice(0, 10), prio: 'normal', erledigt: false, erstellt: zeitpunkt(-10), von: 'Vorstand', link: '/admin/finanzen' },
+    ],
+    vertraege: [
+      { id: 'vt1', titel: 'Hallennutzung Sport- und Therapiehalle (Beispiel)', partner: 'Alexianer Sachsen-Anhalt GmbH', art: 'Hallenmiete', beginn: '2017-06-01', ende: zeitpunkt(80).slice(0, 10), kuendigungsfrist: 2, verlaengerung: 12, betrag: 240, intervall: 'vierteljährlich', richtung: 'ausgabe', erinnerungTage: 60 },
+      { id: 'vt2', titel: 'Vereinshaftpflicht (Beispiel)', partner: 'ARAG Sportversicherung', art: 'Versicherung', beginn: '2020-01-01', ende: `${new Date().getFullYear()}-12-31`, kuendigungsfrist: 3, verlaengerung: 12, betrag: 180, intervall: 'jährlich', richtung: 'ausgabe', erinnerungTage: 45 },
+    ],
     // Bankdaten getrennt vom Antrag: nur mit dem Recht „Finanzen“ sichtbar
     bankdaten: [{ id: 'bk-a1', antragId: 'a1', kontoinhaber: 'Jana Beispiel', iban: 'DE02120300000000202051', datum: zeitpunkt(-1, '20:14'), mandat: true }],
     anfragen: [

@@ -208,6 +208,7 @@ function Loeschung({ d }: SeitenProps) {
 // ---------------- Auftragsverarbeitung & Dienstleister ----------------
 const DIENSTLEISTER: { name: string; zweck: string; rolle: string; avv: string; ort: string }[] = [
   { name: 'Google Firebase (Google Ireland Ltd.)', zweck: 'Datenbank, Anmeldung, Hosting, Dateien, App Check', rolle: 'Auftragsverarbeiter (Art. 28)', avv: 'Firebase-Konsole → Projekteinstellungen → Datenschutz → „Data Processing and Security Terms“ akzeptieren', ort: 'EU (eur3), Datenübermittlung USA nach DPF' },
+  { name: 'Google Gemini über Firebase AI Logic', zweck: 'Vereins-Assistent im Verwaltungsbereich (nur anonymisierte Angaben)', rolle: 'Auftragsverarbeiter (Firebase-Bedingungen)', avv: 'Teil der Firebase Data Processing Terms; keine Namen, Kontakt- oder Bankdaten werden gesendet', ort: 'EU/USA, DPF-zertifiziert' },
   { name: 'GitHub (GitHub Inc.)', zweck: 'Quellcode, E-Mail-Job und verschlüsselte Datensicherung', rolle: 'Auftragsverarbeiter', avv: 'GitHub Data Protection Agreement (gilt mit den GitHub-Nutzungsbedingungen)', ort: 'USA, DPF-zertifiziert' },
   { name: 'E-Mail-Anbieter des Vereinspostfachs', zweck: 'Versand von Rundschreiben und Bestellbestätigungen', rolle: 'Auftragsverarbeiter', avv: 'AVV im Kundenkonto des Anbieters abschließen (z. B. IONOS, Strato, Google Workspace)', ort: 'je nach Anbieter' },
   { name: 'Domain-/DNS-Anbieter (bsg-medizin-dessau.de)', zweck: 'Domain, DNS, ggf. Postfächer', rolle: 'Auftragsverarbeiter, falls Postfächer', avv: 'AVV im Kundenkonto des Registrars', ort: 'je nach Anbieter' },

@@ -91,14 +91,23 @@ function useGruppen(d: SeitenProps['d']): Gruppe[] {
   }, [d]);
 }
 
+// Entwurf vom Assistenten: wird hier übernommen, geprüft und selbst gesendet (nur für diese Sitzung gespeichert)
+const ENTWURF = 'vereinsportal:email-entwurf';
+export interface EmailEntwurf { gruppen: string[]; betreff: string; text: string }
+export function emailEntwurfUebergeben(e: EmailEntwurf) { try { sessionStorage.setItem(ENTWURF, JSON.stringify(e)); } catch { /* egal */ } }
+function entwurfHolen(): EmailEntwurf | null {
+  try { const e = JSON.parse(sessionStorage.getItem(ENTWURF) ?? 'null') as EmailEntwurf | null; sessionStorage.removeItem(ENTWURF); return e; } catch { return null; }
+}
+
 function Schreiben({ d, b }: SeitenProps) {
   const gruppen = useGruppen(d);
   const vorlagen = d.verein.emailVorlagen ?? [];
-  const [gewaehlt, setGewaehlt] = useState<string[]>([]);
+  const [entwurf] = useState(entwurfHolen);
+  const [gewaehlt, setGewaehlt] = useState<string[]>(entwurf?.gruppen ?? []);
   const [extra, setExtra] = useState('');
   const [aus, setAus] = useState<string[]>([]);
-  const [betreff, setBetreff] = useState('');
-  const [text, setText] = useState('');
+  const [betreff, setBetreff] = useState(entwurf?.betreff ?? '');
+  const [text, setText] = useState(entwurf?.text ?? '');
   const [alsMitteilung, setAlsMitteilung] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
   const empfaenger = useMemo(() => {

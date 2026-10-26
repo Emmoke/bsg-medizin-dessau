@@ -58,7 +58,9 @@ export function MitgliedWerden() {
     const { iban: rohIban, kontoinhaber, ...antrag } = w;
     const iban = (rohIban ?? '').replace(/\s/g, '').toUpperCase();
     const id = neueId('a');
-    hinzufuegen('antraege', { ...antrag, id, datum: jetztIso(), status: 'neu', ...(w.sepa && { ibanMaskiert: ibanMaskieren(iban) }) }, `Neuer Mitgliedsantrag: ${w.vorname} ${w.nachname}`);
+    // Automatische Eingangsbestätigung per E-Mail, wenn der Verein den automatischen Versand nutzt
+    const auto = v.emailEinstellungen?.versand === 'automatisch';
+    hinzufuegen('antraege', { ...antrag, id, datum: jetztIso(), status: 'neu', ...(w.sepa && { ibanMaskiert: ibanMaskieren(iban) }), ...(auto && { bestaetigung: 'offen' as const }) }, `Neuer Mitgliedsantrag: ${w.vorname} ${w.nachname}`);
     if (w.sepa) hinzufuegen('bankdaten', { id: `bk-${id}`, antragId: id, kontoinhaber: (kontoinhaber ?? '').trim(), iban, datum: jetztIso(), mandat: true });
     setFertig(true);
   };
@@ -239,7 +241,7 @@ export function Kontakt() {
     if (w.webseite || Date.now() - start < 3000) { setGesendet(true); return; }
     if (!w.name.trim() || !/^\S+@\S+\.\S+$/.test(w.email) || w.nachricht.trim().length < 10) { setFehler('Bitte Name, gültige E-Mail und eine Nachricht (mind. 10 Zeichen) angeben.'); return; }
     if (!w.einwilligung) { setFehler('Bitte der Speicherung deiner Angaben zustimmen.'); return; }
-    hinzufuegen('anfragen', { id: neueId('q'), datum: jetztIso(), name: w.name, email: w.email, betreff: w.betreff || '(ohne Betreff)', nachricht: w.nachricht, an: w.an, status: 'neu' }, `Neue Kontaktanfrage an ${w.an}`);
+    hinzufuegen('anfragen', { id: neueId('q'), datum: jetztIso(), name: w.name, email: w.email, betreff: w.betreff || '(ohne Betreff)', nachricht: w.nachricht, an: w.an, status: 'neu', ...(v.emailEinstellungen?.versand === 'automatisch' && { bestaetigung: 'offen' as const }) }, `Neue Kontaktanfrage an ${w.an}`);
     setGesendet(true);
   };
   return (
