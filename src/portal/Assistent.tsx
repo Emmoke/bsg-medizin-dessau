@@ -12,6 +12,7 @@ import { lagebild } from '../daten/lage';
 import { AKTION_LABEL, AKTIONEN_ANLEITUNG, REGELN, antwortOhneKi, bekannteRechnungen, kontext, zerlegen, type Aktion } from '../daten/assistent';
 import { CLOUD } from '../daten/modus';
 import { app } from '../daten/firebase';
+import type { GenerationConfig } from 'firebase/ai';
 import type { Benutzer, Datenbestand } from '../daten/typen';
 import { bestaetigen } from '../ui/bausteine';
 import { belegPerEmail } from './Finanzen';
@@ -46,7 +47,11 @@ async function fragen(verlauf: Eintrag[], system: string): Promise<string> {
   let letzter: unknown;
   for (const model of MODELLE) {
     try {
-      const r = await getGenerativeModel(ai, { model, systemInstruction: system }).generateContent({ contents });
+      // Gemini 3: wenig „Nachdenken“ = deutlich schnellere Antworten; höchstens 2 Minuten warten
+      // (thinkingLevel kennt das Firebase-SDK 12.4 noch nicht als Typ – der Server versteht es)
+      const generationConfig = model.startsWith('gemini-3') ? ({ thinkingConfig: { thinkingLevel: 'LOW' } } as unknown as GenerationConfig) : undefined;
+      const m = getGenerativeModel(ai, { model, systemInstruction: system, ...(generationConfig && { generationConfig }) }, { timeout: 120_000 });
+      const r = await m.generateContent({ contents });
       return r.response.text().trim();
     } catch (e) {
       letzter = e;
@@ -131,7 +136,8 @@ export function Assistent({ d, b }: { d: Datenbestand; b: Benutzer }) {
         try { antwort = await fragen(neu, system); }
         catch (e) {
           const m = String((e as Error)?.message ?? e);
-          setFehler(/app.?check/i.test(m) ? 'Die KI verlangt App Check – die Web-App ist dort noch nicht registriert (README → Vereins-Assistent).'
+          setFehler(/timeout|abort|zeit/i.test(m) ? 'Die KI hat nicht rechtzeitig geantwortet – hier die offenen Punkte aus euren Daten. Später erneut versuchen.'
+            : /app.?check/i.test(m) ? 'Die KI verlangt App Check – die Web-App ist dort noch nicht registriert (README → Vereins-Assistent).'
             : /api-not-enabled|AI Logic|PERMISSION_DENIED|403|not been used|disabled/i.test(m) ? 'Die KI ist in Firebase noch nicht eingeschaltet (Konsole → AI Logic → „Gemini Developer API“ aktivieren).' : `KI nicht erreichbar: ${m.slice(0, 160)}`);
           antwort = antwortOhneKi(d, b, heute, darf);
         }
@@ -193,7 +199,7 @@ export function Assistent({ d, b }: { d: Datenbestand; b: Benutzer }) {
                 : <p key={j} className="text-xs text-slate-400">Ein Vorschlag wurde verworfen ({t.grund}).</p>)}
           </div>
         ))}
-        {laden && <p className="flex items-center gap-2 text-sm text-slate-500"><Bot className="h-4 w-4 animate-pulse" />Denkt nach …</p>}
+        {laden && <p className="flex items-center gap-2 text-sm text-slate-500"><Bot className="h-4 w-4 animate-pulse" />Denkt nach … (im kostenlosen Tarif manchmal bis zu 2 Minuten)</p>}
         {fehler && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{fehler}</p>}
         <div ref={ende} />
       </div>
