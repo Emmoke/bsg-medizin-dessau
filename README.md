@@ -241,7 +241,10 @@ Bestellverwaltung (Verwaltung → Fanshop), Rechnung aus Bestellung und Verbuchu
 | Zwei-Faktor für Administratoren | Mein Profil → Zwei-Faktor-Anmeldung; Pflicht unter Datenschutz & Sicherheit → Sicherheit (in den Regeln erzwungen) |
 | Passwortrichtlinie | mind. 10 Zeichen (Admin/Vorstand 12) mit Groß-/Kleinbuchstaben und Zahl – im Portal und serverseitig |
 | App Check | reCAPTCHA v3 gegen Bots auf Formularen und Datenbank |
-| Backups | täglich verschlüsselt (Workflow „Datensicherung“), 30 Tage; zusätzlich Download im Portal |
+| Backups | täglich verschlüsselt (Workflow „Datensicherung“), 30 Tage; zusätzlich Download im Portal – nur verschlüsselt (AES-256, Passwort) |
+| Bankdaten (SEPA) | eigene Sammlung `bankdaten`, lesbar nur mit dem Recht „Finanzen“ (Kassenwart); der Vorstand sieht im Antrag nur die maskierte IBAN; Löschung bei Ablehnung/Austritt |
+| Benutzerliste | Mitglieder sehen nur ihr eigenes Profil; E-Mail/Telefon aller Zugänge nur für die Verwaltung |
+| Nichts Vertrauliches im Browser | Im Normalbetrieb werden nur öffentliche Inhalte im Browser zwischengespeichert; Mitglieder-, Bank-, Finanz- und Bestelldaten liegen nur im Arbeitsspeicher und sind nach dem Schließen weg (gemeinsam genutzte Rechner) |
 
 **Einmalige Einrichtung (in dieser Reihenfolge):**
 
