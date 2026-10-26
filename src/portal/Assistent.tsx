@@ -37,8 +37,9 @@ const VORSCHLAEGE: { label: string; text: string; recht?: Recht }[] = [
   { label: 'Mitgliederversammlung', text: 'Hilf mir, die nächste Mitgliederversammlung vorzubereiten: übliche Fristen, Einladung, Tagesordnung und Aufgaben.' },
 ];
 
-// Modelle, auf die bei leerem Kontingent oder fehlendem Modell der Reihe nach ausgewichen wird
-const MODELLE = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+// Modelle, auf die bei Überlastung, leerem Kontingent oder fehlendem Modell der Reihe nach ausgewichen wird
+// (gemini-2.5-flash gibt es für neue Projekte nicht mehr; das Lite-Modell ist meist weniger ausgelastet)
+const MODELLE = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3.8-flash'];
 
 async function fragen(verlauf: Eintrag[], system: string): Promise<string> {
   const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
@@ -55,7 +56,10 @@ async function fragen(verlauf: Eintrag[], system: string): Promise<string> {
       return r.response.text().trim();
     } catch (e) {
       letzter = e;
-      if (!/429|404|RESOURCE_EXHAUSTED|quota|not found|no longer available/i.test(String((e as Error)?.message))) break;
+      const m = String((e as Error)?.message);
+      if (!/429|404|500|503|RESOURCE_EXHAUSTED|UNAVAILABLE|quota|not found|no longer available|high demand|overloaded/i.test(m)) break;
+      // kurz warten, bevor das nächste Modell gefragt wird (Überlastung ist meist nach Sekunden vorbei)
+      await new Promise((r) => setTimeout(r, 2500));
     }
   }
   throw letzter;
@@ -136,7 +140,8 @@ export function Assistent({ d, b }: { d: Datenbestand; b: Benutzer }) {
         try { antwort = await fragen(neu, system); }
         catch (e) {
           const m = String((e as Error)?.message ?? e);
-          setFehler(/timeout|abort|zeit/i.test(m) ? 'Die KI hat nicht rechtzeitig geantwortet – hier die offenen Punkte aus euren Daten. Später erneut versuchen.'
+          setFehler(/high demand|overloaded|UNAVAILABLE|500|503/i.test(m) ? 'Die KI von Google ist gerade überlastet – hier die offenen Punkte aus euren Daten. In ein paar Minuten erneut fragen.'
+            : /timeout|abort|zeit/i.test(m) ? 'Die KI hat nicht rechtzeitig geantwortet – hier die offenen Punkte aus euren Daten. Später erneut versuchen.'
             : /app.?check/i.test(m) ? 'Die KI verlangt App Check – die Web-App ist dort noch nicht registriert (README → Vereins-Assistent).'
             : /api-not-enabled|AI Logic|PERMISSION_DENIED|403|not been used|disabled/i.test(m) ? 'Die KI ist in Firebase noch nicht eingeschaltet (Konsole → AI Logic → „Gemini Developer API“ aktivieren).' : `KI nicht erreichbar: ${m.slice(0, 160)}`);
           antwort = antwortOhneKi(d, b, heute, darf);
