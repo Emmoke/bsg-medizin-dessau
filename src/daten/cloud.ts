@@ -10,6 +10,7 @@ import { auth, db, storage } from './firebase';
 import { cloudUebernehmen, lesen, setzeCloudHaken, vereinAendern } from './speicher';
 import { hatRecht, RECHTE_VERSION, rechteErgaenzen, type Recht } from './rechte';
 import { sha256 } from './sha256';
+import { pfadeAnpassen } from './pfade';
 import type { Benutzer, Datenbestand, Mitglied, Sammlung, Verein } from './typen';
 
 export const SAMMLUNGEN: Sammlung[] = ['mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente',
@@ -69,7 +70,7 @@ function abosAktualisieren() {
     if (f === null) { if ((lesen()[s] as unknown[]).length) cloudUebernehmen({ [s]: [] } as Partial<Datenbestand>); continue; }
     const bedingungen: QueryConstraint[] = f.length ? [where(f[0], f[1], f[2])] : [];
     const ende = onSnapshot(query(collection(db, s), ...bedingungen), (snap) => {
-      cloudUebernehmen({ [s]: snap.docs.map((d) => ({ ...d.data(), id: d.id })) } as Partial<Datenbestand>);
+      cloudUebernehmen({ [s]: snap.docs.map((d) => pfadeAnpassen({ ...d.data(), id: d.id })) } as Partial<Datenbestand>);
       if (s === 'benutzer' || s === 'mitglieder') abosAktualisieren();
       if (s === 'benutzer') statusMelden();
     }, (fehler) => console.warn(`Abo ${s}:`, fehler.code));
@@ -192,7 +193,7 @@ export function cloudStarten() {
   onSnapshot(doc(db, 'meta', 'verein'), (d) => {
     eingerichtet = d.exists();
     if (d.exists()) {
-      const v = d.data() as Verein;
+      const v = pfadeAnpassen(d.data() as Verein);
       cloudUebernehmen({ verein: { ...lesen().verein, ...v, rechte: rechteErgaenzen({ ...lesen().verein.rechte, ...v.rechte }, v.rechteVersion ?? 1) } });
       // Einmalig: neue Rechte dauerhaft speichern (nur ein Admin darf das)
       if ((v.rechteVersion ?? 1) < RECHTE_VERSION && ich()?.rolle === 'admin') vereinAendern({ rechteVersion: RECHTE_VERSION }, 'Neue Rechte ergänzt');

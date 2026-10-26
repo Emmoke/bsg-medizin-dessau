@@ -4,6 +4,13 @@ import assert from 'node:assert/strict';
 import { bestellnummer, bestellsumme, paypalLink, positionen, preisAbweichungen, rechnungAusBestellung, stripeLink, versandkosten, warenwert } from '../src/daten/shop.ts';
 import { blattNamen, crc32, spalte, xlsxErstellen, zipErstellen } from '../src/daten/excel.ts';
 import type { Bestellung, Finanzbeleg, ShopArtikel } from '../src/daten/typen.ts';
+import { pfadeAnpassen } from '../src/daten/pfade.ts';
+
+test('Eigene Bildpfade passen sich an GitHub Pages und Firebase Hosting an', () => {
+  const d = { logo: '/bsg-medizin-dessau/wappen.png', bilder: ['/bsg-medizin-dessau/bsg/zumba.png', '/fotos/team.jpg'], fremd: 'https://example.com/bsg/x.png', medien: 'medien:abc', text: '/verein' };
+  assert.deepEqual(pfadeAnpassen(d, '/'), { logo: '/wappen.png', bilder: ['/bsg/zumba.png', '/fotos/team.jpg'], fremd: 'https://example.com/bsg/x.png', medien: 'medien:abc', text: '/verein' });
+  assert.equal(pfadeAnpassen('/gegner/dsv.webp', '/bsg-medizin-dessau/'), '/bsg-medizin-dessau/gegner/dsv.webp');
+});
 
 const artikel: ShopArtikel[] = [
   { id: 'a', name: 'Shirt', beschreibung: '', preis: 19.9, kategorie: 'Bekleidung', varianten: ['M'], aktiv: true, reihenfolge: 1 },
