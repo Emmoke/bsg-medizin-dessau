@@ -376,8 +376,10 @@ export function beispielDaten(): Datenbestand {
     ],
     antraege: [
       { id: 'a1', datum: zeitpunkt(-1, '20:14'), status: 'neu', vorname: 'Emil', nachname: 'Beispiel', geburtsdatum: '2010-05-12', strasse: 'Musterweg 3', plz: '06847', ort: 'Dessau-Roßlau',
-        email: 'familie.beispiel@example.com', abteilung: 'Sportschießen Jugend (ab 14)', beitragId: 'b2', erziehungsberechtigter: 'Jana Beispiel', kontoinhaber: 'Jana Beispiel', iban: 'DE02120300000000202051', sepa: true, fotoFreigabe: true, notiz: 'Beispielantrag' },
+        email: 'familie.beispiel@example.com', abteilung: 'Sportschießen Jugend (ab 14)', beitragId: 'b2', erziehungsberechtigter: 'Jana Beispiel', ibanMaskiert: 'DE02 •••• 2051', sepa: true, fotoFreigabe: true, notiz: 'Beispielantrag' },
     ],
+    // Bankdaten getrennt vom Antrag: nur mit dem Recht „Finanzen“ sichtbar
+    bankdaten: [{ id: 'bk-a1', antragId: 'a1', kontoinhaber: 'Jana Beispiel', iban: 'DE02120300000000202051', datum: zeitpunkt(-1, '20:14'), mandat: true }],
     anfragen: [
       { id: 'q1', datum: zeitpunkt(-2, '17:40'), name: 'Beispiel-Anfrage', email: 'interessent@example.com', betreff: 'Schnupperstunde Zumba', nachricht: 'Hallo, kann ich am Dienstag einfach zum Zumba vorbeikommen? (Beispiel)', an: 'Zumba', status: 'neu' },
     ],

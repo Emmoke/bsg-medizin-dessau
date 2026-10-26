@@ -15,7 +15,7 @@ import type { Benutzer, Datenbestand, Mitglied, Sammlung, Verein } from './typen
 
 export const SAMMLUNGEN: Sammlung[] = ['mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente',
   'gaestebuch', 'benutzer', 'mitglieder', 'mitteilungen', 'trainings', 'antraege', 'anfragen', 'protokoll', 'buchungen', 'finanzbelege', 'postausgang',
-  'artikel', 'bestellungen'];
+  'artikel', 'bestellungen', 'bankdaten'];
 
 /** Filter je Sammlung: null = nicht lesbar, [] = alles, sonst Bedingung [Feld, Operator, Wert] */
 type Bedingung = null | [] | [string, '==' | 'in', unknown];
@@ -34,7 +34,12 @@ function filter(s: Sammlung, b: Benutzer | null, v: Verein): Bedingung {
       return ['sichtbar', 'in', erlaubt];
     }
     case 'gaestebuch': return recht('news.verwalten') ? [] : ['status', '==', 'freigegeben'];
-    case 'benutzer': case 'mitteilungen': case 'trainings': return b ? [] : null;
+    // Benutzerliste (E-Mail, Telefon) nur für die Verwaltung – alle anderen sehen nur ihr eigenes Profil
+    case 'benutzer':
+      if (!uid) return null;
+      return !benutzerNurEigenes && (recht('benutzer.verwalten') || recht('mannschaften.verwalten') || recht('email.senden') || recht('verein.verwalten')) ? [] : ['id', '==', uid];
+    case 'mitteilungen': case 'trainings': return b ? [] : null;
+    case 'bankdaten': return recht('finanzen.verwalten') ? [] : null;
     case 'mitglieder': return recht('mitglieder.verwalten') ? [] : null;
     case 'antraege': case 'anfragen': return recht('formulare.verwalten') ? [] : null;
     case 'protokoll': return recht('statistik.sehen') ? [] : null;
@@ -46,6 +51,7 @@ function filter(s: Sammlung, b: Benutzer | null, v: Verein): Bedingung {
 }
 
 let uid: string | null = null;
+let benutzerNurEigenes = false;
 export let eingerichtet: boolean | null = null; // null = wird noch geprüft
 const abos = new Map<string, { schluessel: string; ende: () => void }>();
 const statusHoerer = new Set<() => void>();
@@ -60,8 +66,8 @@ function abosAktualisieren() {
   const b = ich();
   const v = lesen().verein;
   for (const s of SAMMLUNGEN) {
-    // Solange der eigene Benutzer noch lädt, nur die Benutzerliste abonnieren (für die Rechteprüfung)
-    const f = uid && !b && s !== 'benutzer' ? filter(s, null, v) : filter(s, s === 'benutzer' && uid ? ({ rolle: 'mitglied', aktiv: true } as Benutzer) : b, v);
+    // Solange das eigene Profil noch lädt, gilt der Gast-Filter (Benutzer: nur das eigene Profil)
+    const f = uid && !b ? filter(s, null, v) : filter(s, b, v);
     const schluessel = JSON.stringify(f);
     const alt = abos.get(s);
     if (alt?.schluessel === schluessel) continue;
@@ -73,7 +79,11 @@ function abosAktualisieren() {
       cloudUebernehmen({ [s]: snap.docs.map((d) => pfadeAnpassen({ ...d.data(), id: d.id })) } as Partial<Datenbestand>);
       if (s === 'benutzer' || s === 'mitglieder') abosAktualisieren();
       if (s === 'benutzer') statusMelden();
-    }, (fehler) => console.warn(`Abo ${s}:`, fehler.code));
+    }, (fehler) => {
+      console.warn(`Abo ${s}:`, fehler.code);
+      // z. B. Admin ohne zweiten Faktor bei Zwei-Faktor-Pflicht: dann wenigstens das eigene Profil laden
+      if (s === 'benutzer' && fehler.code === 'permission-denied' && !benutzerNurEigenes && f.length === 0) { benutzerNurEigenes = true; abos.delete(s); abosAktualisieren(); }
+    });
     abos.set(s, { schluessel, ende });
   }
 }
@@ -204,6 +214,8 @@ export function cloudStarten() {
   onSnapshot(doc(db, 'meta', 'geburtstage'), (d) => cloudUebernehmen({ geburtstagsliste: (d.data()?.liste ?? []) as Datenbestand['geburtstagsliste'], mitgliederAnzahl: d.data()?.anzahl as number | undefined }), () => { /* optional */ });
   onSnapshot(collection(db, 'aufrufe'), (snap) => cloudUebernehmen({ aufrufe: Object.fromEntries(snap.docs.map((d) => [d.id, d.data().n as number])), aufrufDetails: Object.fromEntries(snap.docs.map((d) => [d.id, { besuche: d.data().besuche, seiten: d.data().seiten, geraete: d.data().geraete, quellen: d.data().quellen }])) }), () => { /* optional */ });
   onAuthStateChanged(auth, (u) => {
+    if ((u?.uid ?? null) !== uid) benutzerNurEigenes = false;
+    // Beim Abmelden leert abosAktualisieren alle nicht öffentlichen Sammlungen (Filter null → leere Liste)
     uid = u?.uid ?? null;
     abosAktualisieren();
     statusMelden();

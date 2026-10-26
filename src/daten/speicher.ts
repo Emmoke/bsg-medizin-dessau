@@ -49,10 +49,29 @@ export function vervollstaendigen(roh: Partial<Datenbestand>): Datenbestand {
   return d;
 }
 
+/**
+ * Im Firebase-Betrieb landen nur öffentliche Inhalte im Browser-Zwischenspeicher – Mitglieder, Anträge, Bankdaten,
+ * Finanzen, Bestellungen, E-Mails und Benutzer bleiben nur im Arbeitsspeicher und sind nach dem Schließen weg
+ * (wichtig an gemeinsam genutzten Rechnern).
+ */
+export const OEFFENTLICHE_SAMMLUNGEN = ['mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente', 'gaestebuch', 'artikel'] as const;
+function fuerZwischenspeicher(d: Datenbestand): Partial<Datenbestand> {
+  if (!CLOUD) return d;
+  const oeffentlich = (s: (typeof OEFFENTLICHE_SAMMLUNGEN)[number]) => {
+    const liste = d[s] as { oeffentlich?: boolean; status?: string; sichtbar?: string }[];
+    if (s === 'news') return liste.filter((x) => x.status === 'veroeffentlicht');
+    if (s === 'termine' || s === 'alben') return liste.filter((x) => x.oeffentlich);
+    if (s === 'dokumente') return liste.filter((x) => x.sichtbar === 'oeffentlich');
+    if (s === 'gaestebuch') return liste.filter((x) => x.status === 'freigegeben');
+    return liste;
+  };
+  return { version: d.version, verein: d.verein, aufrufe: d.aufrufe, ...Object.fromEntries(OEFFENTLICHE_SAMMLUNGEN.map((s) => [s, oeffentlich(s)])) };
+}
+
 function speichern() {
   if (!hatSpeicher) return;
   try {
-    localStorage.setItem(SCHLUESSEL, JSON.stringify(stand));
+    localStorage.setItem(SCHLUESSEL, JSON.stringify(fuerZwischenspeicher(stand)));
     speicherFehler = null;
   } catch {
     speicherFehler = 'Der Browserspeicher ist voll. Bitte große Bilder/Dokumente entfernen oder eine Sicherung herunterladen.';
@@ -163,18 +182,13 @@ export function sicherungAnlegen(zwingend = false): boolean {
   return false;
 }
 
-export function sicherungHerunterladen() {
-  const blob = new Blob([JSON.stringify(stand, null, 1)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `vereinsportal-sicherung-${jetztIso().replace(/[:T]/g, '-')}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-
 export function speicherGroesse(): number { return JSON.stringify(stand).length; }
 
 if (hatSpeicher) {
-  if (!localStorage.getItem(SCHLUESSEL)) speichern();
-  sicherungAnlegen();
+  // Älteren Zwischenspeicher mit vertraulichen Daten (vor dieser Version) bereinigen
+  speichern();
+  if (CLOUD) {
+    // Automatische Browser-Sicherungen nur im Demo-Modus – im Firebase-Betrieb lägen sonst Mitgliederdaten im Browser
+    try { localStorage.removeItem(SICHERUNGEN); } catch { /* egal */ }
+  } else sicherungAnlegen();
 }

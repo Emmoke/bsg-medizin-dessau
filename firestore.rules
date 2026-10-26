@@ -37,7 +37,9 @@ service cloud.firestore {
 
     // ---- Benutzer ----
     match /benutzer/{uid} {
-      allow read: if aktiv() || (angemeldet() && request.auth.uid == uid);
+      // Eigenes Profil immer; die ganze Liste (E-Mail, Telefon) nur für die Verwaltung
+      allow read: if (angemeldet() && (request.auth.uid == uid || resource.data.id == request.auth.uid))
+        || darf('benutzer.verwalten') || darf('mannschaften.verwalten') || darf('email.senden') || darf('verein.verwalten');
       // Ersteinrichtung: das erste Konto legt sich selbst als Admin an, solange die Datenbank leer ist
       allow create: if (angemeldet() && request.auth.uid == uid && !eingerichtet() && request.resource.data.rolle == 'admin'
           && request.auth.token.email.lower() in ['emmoke@outlook.de', 'sewar.khalil@outlook.de'])
@@ -101,8 +103,17 @@ service cloud.firestore {
 
     // ---- Formulare: Gäste dürfen einreichen, lesen nur die Verwaltung ----
     match /antraege/{id} {
-      allow create: if request.resource.data.status == 'neu';
+      // neue Anträge ohne Bankdaten (die liegen in /bankdaten)
+      allow create: if request.resource.data.status == 'neu' && !request.resource.data.keys().hasAny(['iban', 'kontoinhaber']);
       allow read, update, delete: if darf('formulare.verwalten');
+    }
+    // SEPA-Bankverbindungen: Gäste legen sie mit dem Antrag an, lesen/ändern nur mit dem Recht „Finanzen“ (Kassenwart)
+    match /bankdaten/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['id', 'antragId', 'kontoinhaber', 'iban', 'datum', 'mandat'])
+        && request.resource.data.iban is string && request.resource.data.iban.matches('^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$')
+        && request.resource.data.kontoinhaber is string && request.resource.data.kontoinhaber.size() <= 100
+        && request.resource.data.mandat == true && id == 'bk-' + request.resource.data.antragId;
+      allow read, update, delete: if darf('finanzen.verwalten');
     }
     match /anfragen/{id} {
       allow create: if request.resource.data.status == 'neu' && request.resource.data.nachricht.size() <= 5000;

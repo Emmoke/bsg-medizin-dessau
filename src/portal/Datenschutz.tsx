@@ -87,6 +87,12 @@ function Loeschkonzept({ d }: SeitenProps) {
   const alteAnfragen = d.anfragen.filter((a) => a.status !== 'neu' && tageSeit(a.datum) > 365);
   const ausgetreten = d.mitglieder.filter((m) => m.status === 'ausgetreten');
   const altePost = d.postausgang.filter((p) => tageSeit(p.datum) > 365);
+  // SEPA-Daten: bei abgelehnten Anträgen sofort, bei ausgetretenen Mitgliedern nach Ende des Mandats löschen
+  const alteBankdaten = d.bankdaten.filter((x) => {
+    const antrag = d.antraege.find((a) => a.id === x.antragId);
+    const mitglied = d.mitglieder.find((m) => m.id === x.mitgliedId);
+    return antrag?.status === 'abgelehnt' || mitglied?.status === 'ausgetreten' || (!antrag && !mitglied);
+  });
   const offeneRegistrierungen = d.benutzer.filter((b) => !b.aktiv && b.registriertAm && !b.letzteAnmeldung && tageSeit(b.registriertAm) > 90);
   const alteBestellungen = d.bestellungen.filter((b) => (b.status === 'storniert' && tageSeit(b.datum) > 365) || (b.status !== 'neu' && tageSeit(b.datum) > 6 * 365 && !b.rechnungId) || tageSeit(b.datum) > 10 * 365);
   const gruppen: { titel: string; text: string; anzahl: number; aktion: () => void; knopf: string }[] = [
@@ -94,6 +100,7 @@ function Loeschkonzept({ d }: SeitenProps) {
     { titel: 'Erledigte Anträge älter als 6 Monate', text: 'Antrag löschen – das Mitglied bleibt in der Mitgliederliste.', anzahl: alteAntraege.length, knopf: 'Anträge löschen', aktion: () => alteAntraege.forEach((a) => entfernen('antraege', a.id, 'Alter Antrag gelöscht')) },
     { titel: 'Beantwortete Anfragen älter als 12 Monate', text: 'Kontaktanfragen werden nicht mehr benötigt.', anzahl: alteAnfragen.length, knopf: 'Anfragen löschen', aktion: () => alteAnfragen.forEach((a) => entfernen('anfragen', a.id, 'Alte Anfrage gelöscht')) },
     { titel: 'E-Mail-Verlauf älter als 12 Monate', text: 'Einträge im Postausgang inkl. Anhängen.', anzahl: altePost.length, knopf: 'Verlauf löschen', aktion: () => altePost.forEach((p) => entfernen('postausgang', p.id, 'Alter E-Mail-Verlauf gelöscht')) },
+    { titel: 'SEPA-Bankdaten ohne gültiges Mandat', text: 'Bankverbindungen abgelehnter Anträge und ausgetretener Mitglieder (sichtbar nur mit dem Recht „Finanzen“).', anzahl: alteBankdaten.length, knopf: 'Bankdaten löschen', aktion: () => alteBankdaten.forEach((x) => entfernen('bankdaten', x.id, 'SEPA-Bankdaten gelöscht (Löschkonzept)')) },
     { titel: 'Nicht freigeschaltete Registrierungen (> 90 Tage)', text: 'Profil löschen; das Anmeldekonto in der Firebase-Konsole (Authentication) entfernen.', anzahl: offeneRegistrierungen.length, knopf: 'Registrierungen löschen', aktion: () => offeneRegistrierungen.forEach((b) => entfernen('benutzer', b.id, 'Alte Registrierung gelöscht')) },
     { titel: 'Fanshop-Bestellungen nach Ablauf der Aufbewahrung', text: 'Stornierte nach 1 Jahr, ohne Rechnung nach 6 Jahren (Handelsbriefe), alle nach 10 Jahren.', anzahl: alteBestellungen.length, knopf: 'Bestellungen löschen', aktion: () => alteBestellungen.forEach((b) => entfernen('bestellungen', b.id, `Bestellung gelöscht (Löschkonzept): ${b.nummer}`)) },
   ];
@@ -132,6 +139,7 @@ function Auskunft({ d }: SeitenProps) {
       spieler: d.spieler.filter((p) => `${p.vorname} ${p.nachname}`.toLowerCase() === name),
       rechnungen_spenden: d.finanzbelege.filter((b) => b.mitgliedId === m.id || b.empfaenger.name.toLowerCase() === name),
       antraege: d.antraege.filter((a) => (mail && a.email.toLowerCase() === mail) || `${a.vorname} ${a.nachname}`.toLowerCase() === name),
+      bankdaten: d.bankdaten.filter((x) => x.mitgliedId === m.id || d.antraege.some((a) => a.id === x.antragId && ((mail && a.email.toLowerCase() === mail) || `${a.vorname} ${a.nachname}`.toLowerCase() === name))),
       anfragen: d.anfragen.filter((a) => mail && a.email.toLowerCase() === mail),
       emails: d.postausgang.filter((p) => mail && p.an.some((x) => x.email.toLowerCase() === mail)).map((p) => ({ ...p, anhang: p.anhang?.name })),
     };
@@ -165,7 +173,9 @@ function Loeschung({ d }: SeitenProps) {
     gaestebuch: d.gaestebuch.filter((g) => passt(g.name)),
     spieler: d.spieler.filter((p) => passt(name(p))),
     postausgang: d.postausgang.filter((p) => p.an.length === 1 && passt(p.an[0].name, p.an[0].email)),
+    bankdaten: [] as { id: string }[],
   };
+  funde.bankdaten = d.bankdaten.filter((x) => funde.antraege.some((a) => a.id === x.antragId) || funde.mitglieder.some((m) => m.id === x.mitgliedId));
   // Aufbewahrungspflichtig (§ 147 AO, § 257 HGB): bleiben erhalten
   const behalten = { rechnungen: d.finanzbelege.filter((b) => passt(b.empfaenger.name, b.empfaenger.email)), bestellungen: d.bestellungen.filter((b) => passt(b.kunde.name, b.kunde.email)) };
   const anzahl = Object.values(funde).reduce((n, l) => n + l.length, 0);
@@ -177,7 +187,7 @@ function Loeschung({ d }: SeitenProps) {
     setSuche(''); setBestaetigt(false);
     hinweis(`${anzahl} Datensätze gelöscht`);
   };
-  const zeilen: [string, number][] = [['Mitgliederliste', funde.mitglieder.length], ['Benutzerkonto (Profil)', funde.benutzer.length], ['Mitgliedsanträge', funde.antraege.length], ['Kontaktanfragen', funde.anfragen.length], ['Gästebuch', funde.gaestebuch.length], ['Spielerlisten', funde.spieler.length], ['E-Mail-Verlauf', funde.postausgang.length]];
+  const zeilen: [string, number][] = [['Mitgliederliste', funde.mitglieder.length], ['Benutzerkonto (Profil)', funde.benutzer.length], ['Mitgliedsanträge', funde.antraege.length], ['Kontaktanfragen', funde.anfragen.length], ['Gästebuch', funde.gaestebuch.length], ['Spielerlisten', funde.spieler.length], ['E-Mail-Verlauf', funde.postausgang.length], ['SEPA-Bankdaten', funde.bankdaten.length]];
   return (
     <Karte titel={<span className="flex items-center gap-2"><UserX className="h-4 w-4" />Recht auf Löschung (Art. 17 DSGVO)</span>}>
       <p className="mb-4 text-sm text-slate-600">E-Mail-Adresse oder vollständigen Namen (Vor- und Nachname) eingeben. Gelöscht wird alles, was nicht aus gesetzlichen Gründen aufbewahrt werden muss. Rechnungen, Spendenbescheinigungen und Bestellungen bleiben bis Fristende erhalten (§ 147 AO).</p>

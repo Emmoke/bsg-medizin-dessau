@@ -5,7 +5,7 @@ import { passwortPruefen, passwortStaerke, registrieren } from '../daten/anmeldu
 import { Link } from '../router';
 import { hinzufuegen, jetztIso, neueId } from '../daten/speicher';
 import { useDaten } from './daten';
-import { alterAm, ibanGueltig } from '../daten/auswertung';
+import { alterAm, ibanGueltig, ibanMaskieren } from '../daten/auswertung';
 import type { Antrag } from '../daten/typen';
 import { useSeite } from '../seo';
 import { Auswahl, Eingabe, Feld, Knopf, Textbereich } from '../ui/bausteine';
@@ -53,7 +53,13 @@ export function MitgliedWerden() {
 
   const absenden = () => {
     if (!pruefen(3)) return;
-    hinzufuegen('antraege', { ...w, id: neueId('a'), datum: jetztIso(), status: 'neu', iban: w.sepa ? w.iban?.replace(/\s/g, '').toUpperCase() : undefined, kontoinhaber: w.sepa ? w.kontoinhaber : undefined }, `Neuer Mitgliedsantrag: ${w.vorname} ${w.nachname}`);
+    // Bankdaten getrennt speichern: Der Antrag (für den Vorstand) enthält nur die maskierte IBAN,
+    // die vollständige Bankverbindung darf nur lesen, wer das Recht „Finanzen“ hat (Kassenwart).
+    const { iban: rohIban, kontoinhaber, ...antrag } = w;
+    const iban = (rohIban ?? '').replace(/\s/g, '').toUpperCase();
+    const id = neueId('a');
+    hinzufuegen('antraege', { ...antrag, id, datum: jetztIso(), status: 'neu', ...(w.sepa && { ibanMaskiert: ibanMaskieren(iban) }) }, `Neuer Mitgliedsantrag: ${w.vorname} ${w.nachname}`);
+    if (w.sepa) hinzufuegen('bankdaten', { id: `bk-${id}`, antragId: id, kontoinhaber: (kontoinhaber ?? '').trim(), iban, datum: jetztIso(), mandat: true });
     setFertig(true);
   };
 

@@ -1,8 +1,10 @@
 // System & Auswertung: Dashboard mit Statistiken, Benutzer & Rollen, Rechte-Matrix, Anträge/Anfragen, Datensicherung, Protokoll.
 import { useState } from 'react';
-import { Users, Inbox, Newspaper, Eye, Plus, Pencil, Check, X, Mail, Download, Upload, RotateCcw, DatabaseBackup, AlertTriangle, KeyRound, Trophy, ClipboardList } from 'lucide-react';
+import { Users, Inbox, Newspaper, Eye, Plus, Pencil, Check, X, Mail, Upload, RotateCcw, DatabaseBackup, KeyRound, Trophy, ClipboardList, Lock } from 'lucide-react';
+import { hatRecht } from '../daten/rechte';
 import { Link } from '../router';
-import { aktualisieren, aufBeispielZuruecksetzen, entfernen, ersetzeAlles, hinzufuegen, jetztIso, neueId, sicherungAnlegen, sicherungen, sicherungHerunterladen, speichereEintrag, speicherGroesse, vereinAendern } from '../daten/speicher';
+import { aktualisieren, aufBeispielZuruecksetzen, entfernen, ersetzeAlles, hinzufuegen, jetztIso, lesen, neueId, sicherungAnlegen, sicherungen, speichereEintrag, speicherGroesse, vereinAendern } from '../daten/speicher';
+import { entschluesseln, istVerschluesselt, sicherungsPasswortOk, verschluesseln } from '../daten/verschluesselung';
 import { ALLE_RECHTE, FESTE_RECHTE, RECHTE, ROLLEN, STANDARD_RECHTE, rollenName, type Recht, type Rolle } from '../daten/rechte';
 import { passwortHash } from '../daten/sha256';
 import { CLOUD } from '../daten/modus';
@@ -212,15 +214,19 @@ export function RechteVerwaltung({ d }: SeitenProps) {
 }
 
 // ---------------- Anträge & Anfragen ----------------
-export function FormulareVerwaltung({ d }: SeitenProps) {
+export function FormulareVerwaltung({ d, b }: SeitenProps) {
   const [r, setR] = useState<'antraege' | 'anfragen'>('antraege');
   const [antrag, setAntrag] = useState<Antrag | null>(null);
   const [archiv, setArchiv] = useState(false);
   const TON = { neu: 'rot', 'in Bearbeitung': 'gelb', angenommen: 'gruen', abgelehnt: 'grau', beantwortet: 'gruen', archiviert: 'grau' } as const;
   const annehmen = (a: Antrag) => {
-    hinzufuegen('mitglieder', { id: neueId('m'), vorname: a.vorname, nachname: a.nachname, geburtsdatum: a.geburtsdatum, email: a.email, telefon: a.telefon, strasse: a.strasse, plz: a.plz, ort: a.ort,
+    const mitgliedId = neueId('m');
+    hinzufuegen('mitglieder', { id: mitgliedId, vorname: a.vorname, nachname: a.nachname, geburtsdatum: a.geburtsdatum, email: a.email, telefon: a.telefon, strasse: a.strasse, plz: a.plz, ort: a.ort,
       eintritt: jetztIso().slice(0, 10), abteilung: a.abteilung, beitragId: a.beitragId, status: 'aktiv', geburtstagZeigen: false, notiz: [a.notiz, a.erziehungsberechtigter && `Erziehungsberechtigt: ${a.erziehungsberechtigter}`, a.fotoFreigabe ? 'Fotofreigabe: ja' : 'Fotofreigabe: nein'].filter(Boolean).join(' · ') });
     aktualisieren('antraege', a.id, { status: 'angenommen' }, `Antrag angenommen, Mitglied angelegt: ${a.vorname} ${a.nachname}`);
+    // SEPA-Mandat dem neuen Mitglied zuordnen (nur wer Finanzen darf, sieht und ändert Bankdaten)
+    const bank = d.bankdaten.find((x) => x.antragId === a.id);
+    if (bank) aktualisieren('bankdaten', bank.id, { mitgliedId });
     hinweis('Mitglied angelegt');
     setAntrag(null);
   };
@@ -264,7 +270,12 @@ export function FormulareVerwaltung({ d }: SeitenProps) {
         <Dialog offen titel={`Antrag: ${antrag.vorname} ${antrag.nachname}`} onClose={() => setAntrag(null)}
           fuss={<>
             {antrag.status !== 'angenommen' && antrag.status !== 'abgelehnt' && <>
-              <Knopf art="gefahr" className="mr-auto" onClick={() => { aktualisieren('antraege', antrag.id, { status: 'abgelehnt' }, `Antrag abgelehnt: ${antrag.vorname} ${antrag.nachname}`); setAntrag(null); }}><X className="h-4 w-4" />Ablehnen</Knopf>
+              <Knopf art="gefahr" className="mr-auto" onClick={() => {
+                aktualisieren('antraege', antrag.id, { status: 'abgelehnt', iban: undefined, kontoinhaber: undefined }, `Antrag abgelehnt: ${antrag.vorname} ${antrag.nachname}`);
+                // Bankdaten eines abgelehnten Antrags werden nicht mehr gebraucht
+                d.bankdaten.filter((x) => x.antragId === antrag.id).forEach((x) => entfernen('bankdaten', x.id));
+                setAntrag(null);
+              }}><X className="h-4 w-4" />Ablehnen</Knopf>
               <Knopf onClick={() => { aktualisieren('antraege', antrag.id, { status: 'in Bearbeitung' }); setAntrag(null); }}>In Bearbeitung</Knopf>
               <Knopf art="primaer" onClick={() => annehmen(antrag)}><Check className="h-4 w-4" />Annehmen & Mitglied anlegen</Knopf>
             </>}
@@ -273,11 +284,16 @@ export function FormulareVerwaltung({ d }: SeitenProps) {
           <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2 text-sm">
             {([['Eingang', `${datumKurz(antrag.datum)} ${uhrzeit(antrag.datum)}`], ['Geburtsdatum', datumKurz(antrag.geburtsdatum)], ['Anschrift', `${antrag.strasse}, ${antrag.plz} ${antrag.ort}`], ['E-Mail', antrag.email], ['Telefon', antrag.telefon || '–'],
               ['Abteilung', antrag.abteilung], ['Beitrag', d.verein.beitraege.find((x) => x.id === antrag.beitragId)?.name ?? '–'], ['Erziehungsber.', antrag.erziehungsberechtigter || '–'],
-              ['Zahlung', antrag.sepa ? `SEPA · ${antrag.kontoinhaber} · ${ibanMaskieren(antrag.iban)}` : 'Überweisung'], ['Fotofreigabe', antrag.fotoFreigabe ? 'ja' : 'nein'], ['Nachricht', antrag.notiz || '–']] as const).map(([k, w]) => (
+              ['Zahlung', antrag.sepa ? `SEPA-Lastschrift · ${antrag.ibanMaskiert ?? ibanMaskieren(antrag.iban)}` : 'Überweisung'], ['Fotofreigabe', antrag.fotoFreigabe ? 'ja' : 'nein'], ['Nachricht', antrag.notiz || '–']] as const).map(([k, w]) => (
               <div key={k} className="contents"><dt className="text-slate-500">{k}</dt><dd className="font-medium">{w}</dd></div>
             ))}
           </dl>
-          {antrag.iban && <p className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900"><AlertTriangle className="h-4 w-4" />Die vollständige IBAN ist nur für den Kassenwart bestimmt. Nach Übernahme in die Buchhaltung den Antrag löschen.</p>}
+          {antrag.sepa && (() => {
+            const bank = d.bankdaten.find((x) => x.antragId === antrag.id);
+            if (!hatRecht(b, 'finanzen.verwalten', d)) return <p className="mt-4 flex items-center gap-2 rounded-lg bg-slate-50 p-2 text-xs text-slate-600"><Lock className="h-4 w-4" />Die vollständige Bankverbindung sieht nur, wer das Recht „Finanzen“ hat (Kassenwart).</p>;
+            if (!bank && !antrag.iban) return null;
+            return <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm"><p className="flex items-center gap-1.5 font-semibold"><Lock className="h-4 w-4" />Bankverbindung (nur Kassenwart)</p><p className="mt-1">{bank?.kontoinhaber ?? antrag.kontoinhaber}</p><p className="zahlen">{(bank?.iban ?? antrag.iban ?? '').replace(/(.{4})/g, '$1 ').trim()}</p></div>;
+          })()}
         </Dialog>
       )}
     </>
@@ -289,17 +305,38 @@ export function Sicherung({ d }: SeitenProps) {
   const [, neu] = useState(0);
   const liste = sicherungen();
   const groesse = speicherGroesse();
+  const [passwort, setPasswort] = useState('');
+  const [laeuft, setLaeuft] = useState(false);
+  // Sicherungen enthalten Mitglieder- und Bankdaten – Download nur verschlüsselt (AES-256, Passwort)
+  const verschluesseltHerunterladen = async () => {
+    if (!sicherungsPasswortOk(passwort)) return hinweis('Passwort mit mindestens 12 Zeichen eingeben', 'fehler');
+    setLaeuft(true);
+    try {
+      const daten = await verschluesseln(JSON.stringify(lesen()), passwort);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([daten as BlobPart], { type: 'application/octet-stream' }));
+      a.download = `vereinsportal-${jetztIso().replace(/[:T]/g, '-')}.sicherung`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      hinweis('Verschlüsselte Sicherung heruntergeladen – Passwort getrennt aufbewahren!');
+    } finally { setLaeuft(false); }
+  };
   const wiederherstellen = async (f: File | undefined) => {
     if (!f) return;
     try {
-      const daten = JSON.parse(await f.text()) as Datenbestand;
+      const roh = new Uint8Array(await f.arrayBuffer());
+      let text: string;
+      if (istVerschluesselt(roh)) {
+        try { text = await entschluesseln(roh, passwort); } catch { return hinweis('Passwort falsch oder Datei beschädigt – Passwort oben eintragen', 'fehler'); }
+      } else text = new TextDecoder().decode(roh);
+      const daten = JSON.parse(text) as Datenbestand;
       if (!daten.verein || !Array.isArray(daten.mannschaften)) throw new Error();
-      if (bestaetigen(`Sicherung „${f.name}“ einspielen? Der aktuelle Stand wird ersetzt (vorher wird automatisch gesichert).`)) { sicherungAnlegen(true); ersetzeAlles(daten); hinweis('Sicherung eingespielt'); }
+      if (bestaetigen(`Sicherung „${f.name}“ einspielen? Der aktuelle Stand wird ersetzt.`)) { if (!CLOUD) sicherungAnlegen(true); ersetzeAlles(daten); hinweis('Sicherung eingespielt'); }
     } catch { hinweis('Datei ist keine gültige Sicherung', 'fehler'); }
   };
   return (
     <>
-      <Kopf titel="Datensicherung" beschreibung="Automatische tägliche Sicherung im Browser + Download als Datei. Regelmäßig herunterladen und extern aufbewahren!" />
+      <Kopf titel="Datensicherung" beschreibung={CLOUD ? 'Die Datenbank wird täglich automatisch verschlüsselt gesichert (GitHub-Job). Zusätzlich hier eine verschlüsselte Sicherungsdatei herunterladen.' : 'Automatische tägliche Sicherung im Browser + verschlüsselter Download als Datei.'} />
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kachel titel="Datenbestand" wert={`${(groesse / 1024 / 1024).toFixed(2)} MB`} icon={<DatabaseBackup className="h-4 w-4" />} unter="Browser-Grenze ca. 5–10 MB" ton={groesse > 4e6 ? 'rot' : 'blau'} />
         <Kachel titel="Automatische Sicherungen" wert={liste.length} unter={liste[0] ? `zuletzt ${datumKurz(liste[0].datum)} ${uhrzeit(liste[0].datum)}` : 'noch keine'} ton="gruen" />
@@ -308,21 +345,25 @@ export function Sicherung({ d }: SeitenProps) {
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Karte titel="Sichern & Wiederherstellen">
-          <div className="flex flex-wrap gap-3">
-            <Knopf art="primaer" onClick={sicherungHerunterladen}><Download className="h-4 w-4" />Sicherung herunterladen</Knopf>
-            <label className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 text-[15px] font-medium hover:bg-slate-50"><Upload className="h-4 w-4" />Sicherung einspielen<input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { wiederherstellen(e.target.files?.[0]); e.target.value = ''; }} /></label>
-            <Knopf onClick={() => { sicherungAnlegen(true); neu((x) => x + 1); hinweis('Sicherung angelegt'); }}>Jetzt im Browser sichern</Knopf>
+          <Feld label="Passwort der Sicherung" hinweis="Mind. 12 Zeichen. Ohne dieses Passwort lässt sich die Datei nicht öffnen – getrennt von der Datei aufbewahren."><Eingabe type="password" autoComplete="new-password" value={passwort} onChange={(e) => setPasswort(e.target.value)} /></Feld>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Knopf art="primaer" laedt={laeuft} disabled={!sicherungsPasswortOk(passwort)} onClick={verschluesseltHerunterladen}><Lock className="h-4 w-4" />Verschlüsselt herunterladen</Knopf>
+            <label className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 text-[15px] font-medium hover:bg-slate-50"><Upload className="h-4 w-4" />Sicherung einspielen<input type="file" accept=".sicherung,application/json,.json" className="hidden" onChange={(e) => { wiederherstellen(e.target.files?.[0]); e.target.value = ''; }} /></label>
+            {!CLOUD && <Knopf onClick={() => { sicherungAnlegen(true); neu((x) => x + 1); hinweis('Sicherung angelegt'); }}>Jetzt im Browser sichern</Knopf>}
           </div>
-          <p className="mt-4 text-sm text-slate-600">Die Sicherungsdatei enthält alle Daten (auch Mitglieder- und Antragsdaten). Bitte verschlüsselt bzw. sicher aufbewahren (DSGVO).</p>
+          <p className="mt-4 text-sm text-slate-600">Die Sicherung enthält alle Daten, auch Mitglieder- und Bankdaten. Sie wird mit AES-256 verschlüsselt; unverschlüsselte Downloads gibt es nicht mehr. Alte unverschlüsselte Sicherungsdateien bitte löschen.</p>
         </Karte>
-        <Karte titel="Automatische Sicherungen (letzte 5 Tage)">
+        {!CLOUD && <Karte titel="Automatische Sicherungen (letzte 5 Tage)">
           {liste.length ? <ul className="divide-y divide-slate-100">{liste.map((s) => (
             <li key={s.datum} className="flex items-center justify-between py-2 text-sm">
               <span>{datumKurz(s.datum)} {uhrzeit(s.datum)} · {(s.groesse / 1024).toFixed(0)} KB</span>
               <Knopf klein onClick={() => { if (bestaetigen('Diesen Stand wiederherstellen?')) { ersetzeAlles(JSON.parse(s.daten)); hinweis('Wiederhergestellt'); } }}><RotateCcw className="h-3.5 w-3.5" />Wiederherstellen</Knopf>
             </li>
           ))}</ul> : <p className="text-sm text-slate-500">Noch keine.</p>}
-        </Karte>
+        </Karte>}
+        {CLOUD && <Karte titel="Automatische Datenbanksicherung">
+          <p className="text-sm text-slate-600">Täglich um 3:15 Uhr sichert der GitHub-Job „Datensicherung“ die komplette Datenbank verschlüsselt (30 Tage). Einrichtung: Secrets <code>FIREBASE_DIENSTKONTO</code> und <code>SICHERUNG_SCHLUESSEL</code> (README → Sicherheit).</p>
+        </Karte>}
         {!CLOUD && <Karte titel="Demo zurücksetzen" className="lg:col-span-2">
           <p className="text-sm text-slate-600">Setzt alle Daten auf die Beispieldaten zurück. Nur für Vorführungen gedacht.</p>
           <Knopf art="gefahr" className="mt-3" onClick={() => { if (bestaetigen('Wirklich ALLE Daten durch Beispieldaten ersetzen?')) { sicherungAnlegen(true); aufBeispielZuruecksetzen(); hinweis('Zurückgesetzt'); } }}>Auf Beispieldaten zurücksetzen</Knopf>

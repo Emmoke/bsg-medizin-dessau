@@ -2,7 +2,7 @@
 // durch die Anmeldung und die Sicherheitsregeln (firestore.rules).
 import { initializeApp, deleteApp } from 'firebase/app';
 import { browserLocalPersistence, createUserWithEmailAndPassword, getAuth, initializeAuth, signOut } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { clearIndexedDbPersistence, initializeFirestore, memoryLocalCache } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getStorage } from 'firebase/storage';
 
@@ -29,8 +29,11 @@ export const STORAGE_AKTIV = import.meta.env.VITE_STORAGE === '1';
 export const storage = STORAGE_AKTIV ? getStorage(app) : null;
 
 export const auth = initializeAuth(app, { persistence: browserLocalPersistence });
-// Daten im Browser zwischenspeichern: beim nächsten Öffnen erscheinen sie sofort, auch kurz ohne Netz
-export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }), ignoreUndefinedProperties: true });
+// Kein dauerhafter Firestore-Zwischenspeicher im Browser (IndexedDB): Mitglieder- und Bankdaten sollen nach dem
+// Schließen nicht auf dem Gerät bleiben. Öffentliche Inhalte puffert speicher.ts für schnelles Öffnen.
+export const db = initializeFirestore(app, { localCache: memoryLocalCache(), ignoreUndefinedProperties: true });
+// Alten Firestore-Zwischenspeicher früherer Versionen (IndexedDB) einmalig löschen
+clearIndexedDbPersistence(db).catch(() => { /* nichts vorhanden */ });
 
 /**
  * Neues Benutzerkonto anlegen, ohne den angemeldeten Admin abzumelden: dafür eine zweite, kurzlebige Firebase-Instanz.

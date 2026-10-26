@@ -5,6 +5,25 @@ import { bestellnummer, bestellsumme, paypalLink, positionen, preisAbweichungen,
 import { blattNamen, crc32, spalte, xlsxErstellen, zipErstellen } from '../src/daten/excel.ts';
 import type { Bestellung, Finanzbeleg, ShopArtikel } from '../src/daten/typen.ts';
 import { pfadeAnpassen } from '../src/daten/pfade.ts';
+import { entschluesseln, istVerschluesselt, verschluesseln } from '../src/daten/verschluesselung.ts';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+test('Verschlüsselte Sicherung: Hin- und Rückweg, falsches Passwort, Entschlüsseln mit dem Werkzeug', async () => {
+  const text = JSON.stringify({ mitglieder: [{ name: 'Erika Muster', iban: 'DE02120300000000202051' }] });
+  const datei = await verschluesseln(text, 'ein-langes-Passwort-42');
+  assert.ok(istVerschluesselt(datei));
+  assert.ok(!new TextDecoder().decode(datei).includes('DE02120300000000202051'), 'IBAN darf nicht im Klartext stehen');
+  assert.equal(await entschluesseln(datei, 'ein-langes-Passwort-42'), text);
+  await assert.rejects(entschluesseln(datei, 'falsches-Passwort-123'));
+  // dasselbe Format liest auch werkzeuge/entschluesseln.mjs (Node, PBKDF2)
+  const ordner = mkdtempSync(join(tmpdir(), 'vps-'));
+  writeFileSync(join(ordner, 'test.sicherung'), datei);
+  execFileSync(process.execPath, ['werkzeuge/entschluesseln.mjs', join(ordner, 'test.sicherung')], { env: { ...process.env, SICHERUNG_SCHLUESSEL: 'ein-langes-Passwort-42' } });
+  assert.equal(readFileSync(join(ordner, 'test.json'), 'utf8'), text);
+});
 
 test('Eigene Bildpfade passen sich an GitHub Pages und Firebase Hosting an', () => {
   const d = { logo: '/bsg-medizin-dessau/wappen.png', bilder: ['/bsg-medizin-dessau/bsg/zumba.png', '/fotos/team.jpg'], fremd: 'https://example.com/bsg/x.png', medien: 'medien:abc', text: '/verein' };

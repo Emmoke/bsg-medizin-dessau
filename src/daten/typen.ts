@@ -287,9 +287,15 @@ export interface Antrag {
   strasse: string; plz: string; ort: string; email: string; telefon?: string;
   abteilung: string; beitragId: string;
   erziehungsberechtigter?: string;
+  /** Nur noch in älteren Anträgen – neue Bankdaten liegen getrennt in "bankdaten" (nur Kassenwart/Finanzen) */
   kontoinhaber?: string; iban?: string; sepa: boolean;
+  /** Maskierte IBAN zur Anzeige für den Vorstand, z. B. "DE02 •••• 2051" */
+  ibanMaskiert?: string;
   fotoFreigabe: boolean; notiz?: string;
 }
+
+/** SEPA-Bankverbindung aus dem Mitgliedsantrag – eigene Sammlung, lesbar nur mit "finanzen.verwalten" */
+export interface Bankdaten { id: string; antragId: string; mitgliedId?: string; kontoinhaber: string; iban: string; datum: string; mandat: boolean }
 
 export interface Anfrage { id: string; datum: string; name: string; email: string; betreff: string; nachricht: string; an: string; status: 'neu' | 'beantwortet' | 'archiviert' }
 export interface Protokolleintrag { id: string; zeit: string; wer: string; aktion: string }
@@ -311,6 +317,7 @@ export interface Datenbestand {
   mitteilungen: Mitteilung[];
   trainings: Training[];
   antraege: Antrag[];
+  bankdaten: Bankdaten[];
   anfragen: Anfrage[];
   gaestebuch: Gaestebucheintrag[];
   gegner: Gegnerverein[];

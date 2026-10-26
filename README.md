@@ -186,7 +186,8 @@ verschlüsselt übertragen (HTTPS) und von Google verschlüsselt gespeichert.
 | `gaestebuch` | Gästebucheinträge | freigegebene für alle | Gäste anlegen, Freigabe `news.verwalten` | bis Löschung |
 | `benutzer` | Portal-Zugänge: Name, E-Mail, Rolle, Teams, letzte Anmeldung (Passwörter **nicht** hier, sondern in Firebase Authentication) | angemeldete | `benutzer.verwalten`, eigenes Profil | bis Löschung |
 | `mitglieder` | Mitgliederliste mit Anschrift, Geburtsdatum, Beitrag | `mitglieder.verwalten` | `mitglieder.verwalten` | 3 Jahre nach Austritt |
-| `antraege`, `anfragen` | Mitgliedsanträge (inkl. IBAN), Kontaktanfragen | `formulare.verwalten` | Gäste anlegen | 6 bzw. 12 Monate |
+| `antraege`, `anfragen` | Mitgliedsanträge (IBAN nur maskiert), Kontaktanfragen | `formulare.verwalten` | Gäste anlegen | 6 bzw. 12 Monate |
+| `bankdaten` | SEPA-Bankverbindung aus dem Mitgliedsantrag (Kontoinhaber, IBAN) | nur `finanzen.verwalten` | Gäste anlegen | bis Mandatsende/Austritt |
 | `bestellungen` | Shop-Bestellungen mit Kundendaten und Zustimmung | `shop.verwalten` | Gäste anlegen | 6–10 Jahre |
 | `buchungen`, `finanzbelege` | Kassenbuch, Rechnungen, Angebote, Spendenbescheinigungen | `finanzen.verwalten` | `finanzen.verwalten` | 10 Jahre (§ 147 AO) |
 | `postausgang` | E-Mails in der Warteschlange und Verlauf | E-Mail/Finanzen/Shop | E-Mail/Finanzen/Shop | 12 Monate |
@@ -200,8 +201,8 @@ verschlüsselt übertragen (HTTPS) und von Google verschlüsselt gespeichert.
 | Ort | Was |
 | --- | --- |
 | Firebase Authentication | Login-E-Mail, Passwort (nur als Hash), Zwei-Faktor-Schlüssel |
-| Browser (localStorage) | Zwischenspeicher der Daten für schnelles Öffnen, Warenkorb, Cookie-Auswahl, im Demo-Modus alle Daten und 5 Tagessicherungen |
-| Browser (sessionStorage / IndexedDB) | Anmeldesitzung (Firebase), Besuchsmerker für die anonyme Statistik, Firestore-Offline-Zwischenspeicher |
+| Browser (localStorage) | nur öffentliche Inhalte als Zwischenspeicher, Warenkorb, Cookie-Auswahl; im Demo-Modus alle (Beispiel-)Daten und 5 Tagessicherungen |
+| Browser (sessionStorage / IndexedDB) | Anmeldesitzung (Firebase), Besuchsmerker für die anonyme Statistik – keine Mitglieder- oder Bankdaten |
 | GitHub Actions (Artefakte) | tägliche, mit AES-256 verschlüsselte Datenbanksicherung, 30 Tage |
 | Vereinspostfach | versendete Rundschreiben und Bestellbestätigungen |
 | Repository `public/` | Vereinslogo, Fotos, PDFs (Satzung, Beitragsordnung …), Gegnerwappen – öffentlich |
