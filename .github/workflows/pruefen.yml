@@ -1,0 +1,26 @@
+name: Prüfen (Tests und Bauen)
+
+# Bei jedem Push: Tests und Typprüfung, Webseite probehalber bauen. Veröffentlicht wird nur über Firebase Hosting
+# (Workflow „Firebase Hosting und Sicherheitsregeln“) – GitHub Pages ist abgeschaltet.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          BASIS: /

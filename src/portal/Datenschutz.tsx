@@ -58,7 +58,7 @@ function Checkliste({ d }: SeitenProps) {
       ['Mitgliedsanträge', 'Aufnahme', 'Art. 6 (1) b DSGVO', 'Interessenten', 'Antragsdaten, IBAN', 'Vorstand', '6 Monate nach Entscheidung'],
       ['Kontaktanfragen', 'Beantwortung', 'Art. 6 (1) b/f DSGVO', 'Anfragende', 'Name, E-Mail, Nachricht', 'Vorstand', '12 Monate'],
       ['Portal-Zugänge', 'Mitglieder-/Trainerbereich', 'Art. 6 (1) b DSGVO', 'Benutzer', 'Name, E-Mail, Rolle, letzte Anmeldung', 'Firebase (Google, EU)', 'bei Löschung des Zugangs'],
-      ['Webseite', 'Information, anonyme Statistik', 'Art. 6 (1) f DSGVO', 'Besucher', 'keine personenbezogenen Daten gespeichert', 'GitHub (Hosting)', '–'],
+      ['Webseite', 'Information, anonyme Statistik', 'Art. 6 (1) f DSGVO', 'Besucher', 'keine personenbezogenen Daten gespeichert', 'Firebase Hosting (Google, EU)', '–'],
       ['Fotos', 'Öffentlichkeitsarbeit', 'Art. 6 (1) a DSGVO', 'Mitglieder', 'Bilder', 'Öffentlichkeit', 'bei Widerruf'],
       ['Fanshop', 'Abwicklung von Bestellungen', 'Art. 6 (1) b, c DSGVO', 'Kunden', 'Name, E-Mail, Anschrift, Bestellung, Zahlungsstatus', 'Vorstand, Kassenwart; PayPal/Stripe (eigene Verantwortliche)', 'Bestellungen 6 Jahre, Rechnungen 10 Jahre'],
       ['Registrierung', 'Zugang zum Mitgliederbereich', 'Art. 6 (1) a DSGVO', 'Interessenten, Mitglieder', 'Name, E-Mail, Zeitpunkt der Einwilligung', 'Firebase (Google, EU)', 'nicht freigeschaltet: 90 Tage'],
@@ -208,7 +208,7 @@ function Loeschung({ d }: SeitenProps) {
 // ---------------- Auftragsverarbeitung & Dienstleister ----------------
 const DIENSTLEISTER: { name: string; zweck: string; rolle: string; avv: string; ort: string }[] = [
   { name: 'Google Firebase (Google Ireland Ltd.)', zweck: 'Datenbank, Anmeldung, Hosting, Dateien, App Check', rolle: 'Auftragsverarbeiter (Art. 28)', avv: 'Firebase-Konsole → Projekteinstellungen → Datenschutz → „Data Processing and Security Terms“ akzeptieren', ort: 'EU (eur3), Datenübermittlung USA nach DPF' },
-  { name: 'GitHub (GitHub Inc.)', zweck: 'Auslieferung der Webseite (Pages), E-Mail- und Sicherungs-Job', rolle: 'Auftragsverarbeiter', avv: 'GitHub Data Protection Agreement (gilt mit den GitHub-Nutzungsbedingungen)', ort: 'USA, DPF-zertifiziert' },
+  { name: 'GitHub (GitHub Inc.)', zweck: 'Quellcode, E-Mail-Job und verschlüsselte Datensicherung', rolle: 'Auftragsverarbeiter', avv: 'GitHub Data Protection Agreement (gilt mit den GitHub-Nutzungsbedingungen)', ort: 'USA, DPF-zertifiziert' },
   { name: 'E-Mail-Anbieter des Vereinspostfachs', zweck: 'Versand von Rundschreiben und Bestellbestätigungen', rolle: 'Auftragsverarbeiter', avv: 'AVV im Kundenkonto des Anbieters abschließen (z. B. IONOS, Strato, Google Workspace)', ort: 'je nach Anbieter' },
   { name: 'Domain-/DNS-Anbieter (bsg-medizin-dessau.de)', zweck: 'Domain, DNS, ggf. Postfächer', rolle: 'Auftragsverarbeiter, falls Postfächer', avv: 'AVV im Kundenkonto des Registrars', ort: 'je nach Anbieter' },
   { name: 'PayPal (Europe) S.à r.l. et Cie, S.C.A.', zweck: 'Zahlungsabwicklung Fanshop', rolle: 'eigener Verantwortlicher', avv: 'kein AVV nötig – Hinweis in der Datenschutzerklärung (§ 11)', ort: 'Luxemburg' },

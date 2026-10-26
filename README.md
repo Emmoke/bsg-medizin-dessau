@@ -27,8 +27,8 @@ Beim ersten Start werden Beispieldaten geladen. Demo-Zugänge (unter `/login` an
 
 ## Veröffentlichen
 
-- **GitHub Pages:** Der Workflow `.github/workflows/pages.yml` baut bei jedem Push auf `main` und veröffentlicht unter
-  `https://<konto>.github.io/<repo>/` (Pages in den Repo-Einstellungen auf „GitHub Actions“ stellen).
+- **Einzige Adresse:** https://bsg-medizin-dessau.web.app (Firebase Hosting, später www.bsg-medizin-dessau.de).
+  GitHub Pages ist abgeschaltet; `.github/workflows/pruefen.yml` testet und baut nur probehalber.
 - **Firebase Hosting / eigene Domain:** siehe Abschnitt „Hosting & Domain“.
 
 ## Testbetrieb und Veröffentlichung
@@ -79,11 +79,11 @@ geringe Kosten (Firebase im kostenlosen Spark-Tarif, IONOS Webhosting Plus ca. 1
 
 Die Webseite ist eine **Single-Page-App**: Der Browser lädt einmal `index.html` und das JavaScript; danach wechselt die
 App die Seiten selbst (eigener kleiner Router, `src/router.tsx`), ohne neu zu laden. Es gibt **keinen eigenen Server** –
-die Dateien liegen statisch auf GitHub Pages bzw. Firebase Hosting, alle Daten kommen direkt aus **Google Firebase**.
+die Dateien liegen statisch auf Firebase Hosting, alle Daten kommen direkt aus **Google Firebase**.
 
 ```mermaid
 flowchart LR
-  B[Besucher / Mitglied<br/>Browser] -->|lädt HTML, JS, Bilder| H[GitHub Pages<br/>Firebase Hosting]
+  B[Besucher / Mitglied<br/>Browser] -->|lädt HTML, JS, Bilder| H[Firebase Hosting]
   B <-->|Anmeldung| A[Firebase Authentication<br/>E-Mail/Passwort + Zwei-Faktor]
   B <-->|Daten in Echtzeit lesen/schreiben| F[(Firestore-Datenbank<br/>Region EU eur3)]
   F -.->|prüft jeden Zugriff| R[firestore.rules<br/>Rollen und Rechte]
@@ -108,7 +108,7 @@ flowchart LR
    kein Recht hat.
 6. Große Bilder/Dateien (über 20 KB) werden als eigenes Dokument in `medien` abgelegt und im Text nur als `medien:<id>`
    gespeichert; die Seite lädt sie beim Anzeigen nach. Eigene Bildpfade werden an die jeweilige Adresse angepasst
-   (`daten/pfade.ts`), damit sie auf GitHub Pages, Firebase Hosting und der eigenen Domain funktionieren.
+   (`daten/pfade.ts`), damit auch ältere gespeicherte Pfade auf Firebase Hosting und der eigenen Domain funktionieren.
 
 **Demo-Modus:** Mit `?demo` an der Adresse läuft alles nur im Browser mit Beispieldaten (localStorage) – ohne Firebase,
 gut zum Ausprobieren und für Vorführungen. `?demo=aus` beendet ihn.
@@ -200,7 +200,7 @@ tests/                   Tests der Kernlogik (Tabelle, Rechte, IBAN, Kalender, F
 firestore.rules          Sicherheitsregeln der Datenbank
 storage.rules            Sicherheitsregeln für Firebase Storage (optional)
 firebase.json            Firebase Hosting (Weiterleitung, Sicherheits-Header, Cache) und Regeln
-.github/workflows/       pages.yml, firebase.yml, postausgang.yml, sicherung.yml, sicherheit.yml
+.github/workflows/       pruefen.yml, firebase.yml, postausgang.yml, sicherung.yml, sicherheit.yml
 ```
 
 ## Wie und wo gebaut wird
@@ -211,8 +211,8 @@ firebase.json            Firebase Hosting (Weiterleitung, Sicherheits-Header, Ca
 | Prüfen | lokal und bei jedem Push | `npm test` (Logik-Tests), `tsc --noEmit` (Typprüfung) |
 | Bauen | `npm run build` | TypeScript prüfen → Vite erzeugt `dist/` → `werkzeuge/nach-build.mjs` fügt Sicherheitsrichtlinie (CSP), `404.html`, `sitemap.xml`, `robots.txt` hinzu |
 | Code speichern | GitHub `Emmoke/bsg-medizin-dessau`, Zweig `main` | jede Änderung als Commit |
-| Veröffentlichen | GitHub Actions `pages.yml` | baut mit `BASIS=/bsg-medizin-dessau/` → https://emmoke.github.io/bsg-medizin-dessau/ |
-| | GitHub Actions `firebase.yml` (mit Secret `FIREBASE_DIENSTKONTO`) oder `firebase deploy` | baut mit `BASIS=/` → https://bsg-medizin-dessau.web.app (später www.bsg-medizin-dessau.de) und spielt die Sicherheitsregeln ein |
+| Prüfen | GitHub Actions `pruefen.yml` | Tests und Probebau bei jedem Push (veröffentlicht nichts) |
+| Veröffentlichen | GitHub Actions `firebase.yml` (mit Secret `FIREBASE_DIENSTKONTO`) oder `firebase deploy` | baut mit `BASIS=/` → https://bsg-medizin-dessau.web.app (später www.bsg-medizin-dessau.de) und spielt die Sicherheitsregeln ein |
 
 ## Wo die Angaben gespeichert werden
 
@@ -280,7 +280,7 @@ Bestellverwaltung (Verwaltung → Fanshop), Rechnung aus Bestellung und Verbuchu
 
 | Maßnahme | Wo |
 | --- | --- |
-| HTTPS/SSL, HSTS und Sicherheits-Header | GitHub Pages bzw. Firebase Hosting (`firebase.json`), CSP in `werkzeuge/nach-build.mjs` |
+| HTTPS/SSL, HSTS und Sicherheits-Header | Firebase Hosting (`firebase.json`), CSP in `werkzeuge/nach-build.mjs` |
 | Zugriffsschutz | `firestore.rules`, `storage.rules` – Rollen/Rechte serverseitig, Trainer nur eigene Teams |
 | Zwei-Faktor für Administratoren | Mein Profil → Zwei-Faktor-Anmeldung; Pflicht unter Datenschutz & Sicherheit → Sicherheit (in den Regeln erzwungen) |
 | Passwortrichtlinie | mind. 10 Zeichen (Admin/Vorstand 12) mit Groß-/Kleinbuchstaben und Zahl – im Portal und serverseitig |
@@ -301,8 +301,8 @@ Bestellverwaltung (Verwaltung → Fanshop), Rechnung aus Bestellung und Verbuchu
    Dann als Admin in „Mein Profil“ die Authenticator-App einrichten und unter Datenschutz & Sicherheit die Pflicht einschalten.
 3. **Backups:** Secret `SICHERUNG_SCHLUESSEL` (langes, zufälliges Passwort – sicher im Vorstand aufbewahren!) anlegen.
    Wiederherstellen: Artefakt herunterladen, `SICHERUNG_SCHLUESSEL="…" node werkzeuge/entschluesseln.mjs <datei>`.
-4. **App Check:** Google reCAPTCHA v3 → Website registrieren (Domains: `bsg-medizin-dessau.de`, `bsg-medizin-dessau.web.app`,
-   `<konto>.github.io`). Websiteschlüssel in GitHub unter Settings → Variables als `APPCHECK_SCHLUESSEL`, geheimen Schlüssel
+4. **App Check:** Google reCAPTCHA v3 → Website registrieren (Domains: `bsg-medizin-dessau.de`, `bsg-medizin-dessau.web.app`).
+   Websiteschlüssel in GitHub unter Settings → Variables als `APPCHECK_SCHLUESSEL`, geheimen Schlüssel
    in der Firebase-Konsole → App Check → Web-App registrieren. Nach ein paar Tagen „Erzwingen“ für Firestore einschalten.
 5. **Storage (optional):** Firebase Storage braucht den Blaze-Tarif. Dann Variable `STORAGE=1` setzen – neue Bilder liegen als
    Dateien in Storage, bestehende bleiben in Firestore.
@@ -310,7 +310,7 @@ Bestellverwaltung (Verwaltung → Fanshop), Rechnung aus Bestellung und Verbuchu
 ## Hosting & Domain
 
 - **Firebase Hosting:** Mit `FIREBASE_DIENSTKONTO` veröffentlicht der Workflow „Firebase Hosting und Sicherheitsregeln“
-  bei jedem Push unter `https://bsg-medizin-dessau.web.app` und spielt die Regeln ein. GitHub Pages läuft parallel weiter.
+  bei jedem Push unter `https://bsg-medizin-dessau.web.app` und spielt die Regeln ein.
 - **Domain `bsg-medizin-dessau.de`** (noch nicht registriert): bei einem Anbieter registrieren (z. B. IONOS, Strato, INWX),
   Postfächer **info@**, **vorstand@** und **shop@** anlegen, in Firebase Hosting „Benutzerdefinierte Domain hinzufügen“ und die
   angezeigten DNS-Einträge beim Anbieter eintragen (SSL-Zertifikat automatisch). Variable `DOMAIN=https://www.bsg-medizin-dessau.de`

@@ -26,7 +26,7 @@ jobs:
         id: pruefen
         run: |
           if [ -z "$FIREBASE_DIENSTKONTO" ]; then
-            echo "::notice::Firebase Hosting ist noch nicht eingerichtet (Secret FIREBASE_DIENSTKONTO) – übersprungen. Die Seite läuft weiter über GitHub Pages."
+            echo "::notice::Firebase Hosting ist noch nicht eingerichtet (Secret FIREBASE_DIENSTKONTO) – übersprungen. Bis dahin wird von Hand veröffentlicht (npx firebase-tools deploy --only hosting)."
             echo "aktiv=nein" >> "$GITHUB_OUTPUT"
           else
             echo "aktiv=ja" >> "$GITHUB_OUTPUT"

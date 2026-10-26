@@ -1,4 +1,4 @@
-// Mustertext der Datenschutzerklärung – passend zur Technik des Vereinsportals (GitHub Pages, Firebase in der EU,
+// Mustertext der Datenschutzerklärung – passend zur Technik des Vereinsportals (Firebase Hosting und Datenbank in der EU,
 // E-Mail-Versand, Besucherzählung ohne Cookies). Vor Veröffentlichung rechtlich prüfen lassen.
 import type { Verein } from './typen';
 
@@ -7,7 +7,7 @@ export function datenschutzMuster(v: Pick<Verein, 'name' | 'strasse' | 'plz' | '
 ${v.name}, ${v.strasse}, ${v.plz} ${v.ort}, E-Mail: ${v.email}. Vertreten durch den Vorstand (siehe Impressum). Ansprechpartner für Datenschutz ist der Vorstand.
 
 § 2. Hosting der Webseite
-Die Webseite wird über Firebase Hosting (Google Ireland Ltd.) bzw. GitHub Pages (GitHub Inc., USA) ausgeliefert. Beim Aufruf werden technisch notwendige Daten (u. a. IP-Adresse, Zeitpunkt, aufgerufene Seite) in Server-Protokollen verarbeitet, um die Seite sicher auszuliefern (Art. 6 Abs. 1 lit. f DSGVO). Mit Google besteht ein Auftragsverarbeitungsvertrag (Art. 28 DSGVO); beide Anbieter sind unter dem EU-US Data Privacy Framework zertifiziert.
+Die Webseite wird über Firebase Hosting (Google Ireland Ltd.) ausgeliefert. Beim Aufruf werden technisch notwendige Daten (u. a. IP-Adresse, Zeitpunkt, aufgerufene Seite) in Server-Protokollen verarbeitet, um die Seite sicher auszuliefern (Art. 6 Abs. 1 lit. f DSGVO). Mit Google besteht ein Auftragsverarbeitungsvertrag (Art. 28 DSGVO); Google ist unter dem EU-US Data Privacy Framework zertifiziert.
 
 § 3. Keine Cookies, kein Tracking
 Wir setzen keine Cookies zu Werbe- oder Analysezwecken und binden keine Analysedienste Dritter ein. Seitenaufrufe zählen wir anonym als Tageszahl (Seite, Gerätetyp, grobe Herkunft wie „Suchmaschine“) – ohne IP-Adresse, ohne Profilbildung. Dafür wird für die Dauer des Besuchs ein Merker im Sitzungsspeicher des Browsers abgelegt.
