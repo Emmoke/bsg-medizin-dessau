@@ -8,3 +8,5 @@ Datenbank/
 *sicherung*.json
 *.sicherung
 dienstkonto*.json
+# Zwischenspeicher der Firebase-CLI
+.firebase/
