@@ -31,6 +31,50 @@ Beim ersten Start werden Beispieldaten geladen. Demo-Zugänge (unter `/login` an
   `https://<konto>.github.io/<repo>/` (Pages in den Repo-Einstellungen auf „GitHub Actions“ stellen).
 - **Firebase Hosting / eigene Domain:** siehe Abschnitt „Hosting & Domain“.
 
+## Testbetrieb und Veröffentlichung
+
+Bis alle Angaben erledigt sind, läuft die Webseite im **Testbetrieb**: Gäste sehen nur eine „Bald online“-Seite mit
+Anmeldung, Impressum und Datenschutz (für Suchmaschinen gesperrt). Angemeldete Personen (Vorstand, Trainer, Mitglieder)
+sehen die komplette Seite mit einem gelben Hinweisbalken. Die Sperre gilt auch in der Datenbank: `firestore.rules`
+(`sichtbar()`) gibt Gästen keine Inhalte heraus, solange `meta/verein.veroeffentlicht` nicht `true` ist.
+
+**Veröffentlichen:** Verwaltung → Webseite → „Veröffentlichung“. Die Checkliste zeigt, was noch fehlt (Impressum,
+Datenschutzerklärung, Vorstand, sichtbare Abteilungen, keine Beispiel-Inhalte, Shop-Texte, Bankverbindung). Mit dem
+Schalter „Webseite öffentlich“ ist die Seite sofort für alle sichtbar; zurück in den Testbetrieb geht es genauso.
+
+## Betrieb und Eigentum (Empfehlung)
+
+Der Verein bleibt jederzeit Eigentümer von Webseite, Daten und Zugängen; der Entwickler bekommt nur die nötigen Rechte.
+
+```
+Verein
+├── Google-Konto des Vereins (z. B. admin@bsg-medizin-dessau.de)
+│   └── Firebase-Projekt bsg-medizin-dessau: Hosting, Firestore, Authentication, Storage
+├── IONOS (Webhosting Plus): Domain bsg-medizin-dessau.de, SSL, Postfächer info@, vorstand@, ggf. shop@
+├── GitHub (Organisation des Vereins): Quellcode, automatische Veröffentlichung, E-Mail- und Backup-Jobs
+└── Entwickler: Administrator-/Bearbeiterrechte im Firebase-Projekt und im GitHub-Repository
+```
+
+| Was | Eigentümer | Entwickler |
+| --- | --- | --- |
+| Google-Konto, Firebase-Projekt | Verein (Rolle „Inhaber“) | Rolle „Bearbeiter“ bzw. „Firebase-Administrator“ |
+| Domain, E-Mail-Konten (IONOS) | Verein (Vertragspartner) | kein Zugang nötig, ggf. DNS-Zugriff |
+| GitHub-Repository | Organisation des Vereins | Mitglied mit Schreibrecht |
+| Admin-Zugang im Vereinsportal | Vorstand (mind. 2 Administratoren mit Zwei-Faktor) | eigener Zugang, jederzeit sperrbar |
+| Secrets (Dienstkonto, Backup-Passwort, SMTP) | im GitHub des Vereins, Backup-Passwort beim Vorstand | setzt sie ein, bewahrt keine Kopie auf |
+
+**Übergabe an den Verein (einmalig):**
+1. Google-Konto des Vereins anlegen (am besten mit einer Vereinsadresse) und mit Zwei-Faktor schützen.
+2. Firebase-Konsole → Projekteinstellungen → Nutzer und Berechtigungen: das Vereinskonto als **Inhaber** hinzufügen;
+   das Entwicklerkonto danach auf „Bearbeiter“ zurückstufen.
+3. GitHub: Organisation für den Verein anlegen und das Repository dorthin übertragen (Settings → Transfer);
+   Entwickler als Mitglied einladen. Danach die Secrets dort neu hinterlegen.
+4. IONOS-Vertrag (Domain, Postfächer) auf den Verein abschließen.
+5. Im Portal: mindestens zwei Vorstandsmitglieder als Administrator mit Zwei-Faktor-Anmeldung.
+
+Vorteile: keine Abhängigkeit vom Entwickler, Wechsel jederzeit möglich, klare Verantwortung im Datenschutz,
+geringe Kosten (Firebase im kostenlosen Spark-Tarif, IONOS Webhosting Plus ca. 132 €/Jahr), kein eigener Server.
+
 ## So arbeitet die Webseite
 
 Die Webseite ist eine **Single-Page-App**: Der Browser lädt einmal `index.html` und das JavaScript; danach wechselt die

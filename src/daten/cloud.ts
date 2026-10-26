@@ -20,8 +20,12 @@ export const SAMMLUNGEN: Sammlung[] = ['mannschaften', 'spieler', 'spiele', 'tab
 /** Filter je Sammlung: null = nicht lesbar, [] = alles, sonst Bedingung [Feld, Operator, Wert] */
 type Bedingung = null | [] | [string, '==' | 'in', unknown];
 
+/** Inhalte, die Gäste nach der Veröffentlichung lesen dürfen – im Testbetrieb nur angemeldete Personen */
+const OEFFENTLICH = new Set<Sammlung>(['mannschaften', 'spieler', 'spiele', 'tabellen', 'news', 'termine', 'sponsoren', 'alben', 'gegner', 'dokumente', 'gaestebuch', 'artikel']);
+
 function filter(s: Sammlung, b: Benutzer | null, v: Verein): Bedingung {
   const recht = (r: Recht) => hatRecht(b, r, { verein: v });
+  if (!b && v.veroeffentlicht !== true && OEFFENTLICH.has(s)) return null;
   switch (s) {
     case 'news': return b ? [] : ['status', '==', 'veroeffentlicht'];
     case 'termine': return b ? [] : ['oeffentlich', '==', true];

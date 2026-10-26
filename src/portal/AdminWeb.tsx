@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Check, Search, Wand2 } from 'lucide-react';
 import { aktualisieren, entfernen, hinzufuegen, neueId, speichereEintrag, vereinAendern } from '../daten/speicher';
 import { datumKurz, uhrzeit } from '../daten/auswertung';
-import type { Gegnerverein, Kategorie, Verein, Verweis } from '../daten/typen';
+import type { Datenbestand, Gegnerverein, Kategorie, Verein, Verweis } from '../daten/typen';
 import { Auswahl, BildWahl, Dialog, Eingabe, Feld, Karte, Knopf, Kopf, Leer, Marke, Reiter, Schalter, Textbereich, bestaetigen, hinweis } from '../ui/bausteine';
 import { GegnerMarke } from '../oeffentlich/Teile';
 import type { SeitenProps } from './Portal';
@@ -107,6 +107,7 @@ export function WebseiteVerwaltung({ d }: SeitenProps) {
       <Kopf titel="Webseite" beschreibung="Titelfoto und Untertitel der Startseite, Links-Seite und Vereinsheim."
         aktionen={<><Knopf disabled={!geaendert} onClick={() => setV(d.verein)}>Verwerfen</Knopf><Knopf art="primaer" disabled={!geaendert} onClick={() => { vereinAendern(v, 'Webseite geändert'); hinweis('Gespeichert'); }}>Speichern</Knopf></>} />
       <div className="grid gap-6 lg:grid-cols-2">
+        <VeroeffentlichungsKarte d={d} />
         <DomainKarte verein={d.verein} />
         <Karte titel="Startseite">
           <div className="space-y-4">
@@ -143,6 +144,42 @@ export function WebseiteVerwaltung({ d }: SeitenProps) {
         </Karte>
       </div>
     </>
+  );
+}
+
+// ---------------- Testbetrieb / Veröffentlichung ----------------
+function VeroeffentlichungsKarte({ d }: { d: Datenbestand }) {
+  const v = d.verein;
+  const beispiel = (t?: string) => !!t && /beispiel/i.test(t);
+  const beispiele = d.mannschaften.filter((x) => beispiel(x.name)).length + d.news.filter((x) => beispiel(x.titel)).length + d.termine.filter((x) => beispiel(x.titel)).length
+    + d.gegner.filter((x) => beispiel(x.name)).length + d.sponsoren.filter((x) => beispiel(x.name)).length + d.spieler.filter((x) => beispiel(x.nachname)).length;
+  const shopOffen = !!v.shop?.aktiv && d.artikel.some((a) => a.aktiv);
+  const punkte: [boolean, string][] = [
+    [!/Mustertext|Platzhalter/.test(v.impressum) && v.impressum.length > 100, 'Impressum vollständig (Vertretung, Register, Kontakt)'],
+    [v.datenschutz.includes('Firebase'), 'Datenschutzerklärung aktuell (Datenschutz & Sicherheit → Mustertext)'],
+    [v.vorstand.some((p) => p.email), 'Vorstand mit Kontaktadresse'],
+    [d.mannschaften.some((m) => m.sichtbar !== false && !(v.ausgeblendeteSportarten ?? []).includes(m.sportart)), 'Mindestens eine Abteilung sichtbar'],
+    [beispiele === 0, `Keine Beispiel-Inhalte mehr${beispiele ? ` (noch ${beispiele})` : ''}`],
+    [!shopOffen || (!/Mustertext/.test(v.shop!.agb) && !/Mustertext/.test(v.shop!.widerruf)), 'Shop: AGB und Widerruf geprüft (oder Shop noch leer)'],
+    [!shopOffen || !v.shop!.zahlarten.includes('ueberweisung') || !!v.finanzen?.iban, 'Shop: Bankverbindung für Überweisung eingetragen'],
+  ];
+  const offen = punkte.filter(([ok]) => !ok).length;
+  const umschalten = (an: boolean) => {
+    if (an && !bestaetigen(offen ? `Noch ${offen} Punkt(e) offen. Trotzdem veröffentlichen? Danach ist die Webseite für alle sichtbar.` : 'Webseite jetzt für alle veröffentlichen?')) return;
+    if (!an && !bestaetigen('Webseite wieder in den Testbetrieb nehmen? Gäste sehen dann nur noch die Hinweisseite.')) return;
+    vereinAendern({ veroeffentlicht: an, ...(an && { veroeffentlichtAm: new Date().toISOString().slice(0, 10) }) }, an ? 'Webseite veröffentlicht' : 'Webseite in den Testbetrieb genommen');
+    hinweis(an ? 'Die Webseite ist jetzt öffentlich' : 'Testbetrieb – nur angemeldete Personen sehen die Webseite');
+  };
+  return (
+    <Karte titel="Veröffentlichung" className="lg:col-span-2" aktionen={v.veroeffentlicht ? <Marke ton="gruen">öffentlich seit {v.veroeffentlichtAm ? datumKurz(v.veroeffentlichtAm).slice(4) : '–'}</Marke> : <Marke ton="gelb">Testbetrieb</Marke>}>
+      <div className="grid gap-5 md:grid-cols-[1fr_1.2fr]">
+        <div>
+          <p className="text-sm text-slate-600">{v.veroeffentlicht ? 'Die Webseite ist für alle sichtbar.' : 'Im Testbetrieb sehen nur angemeldete Personen (Vorstand, Trainer, Mitglieder) die Webseite. Gäste sehen eine „Bald online“-Seite mit Impressum und Datenschutz; die Datenbank gibt ihnen keine Inhalte heraus.'}</p>
+          <div className="mt-4"><Schalter an={!!v.veroeffentlicht} onChange={umschalten} label="Webseite öffentlich" beschreibung="Erst einschalten, wenn alle Angaben erledigt sind" /></div>
+        </div>
+        <ul className="space-y-1.5 text-sm">{punkte.map(([ok, t]) => <li key={t} className="flex gap-2">{ok ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400" />}<span className={ok ? 'text-slate-500' : 'font-medium'}>{t}</span></li>)}</ul>
+      </div>
+    </Karte>
   );
 }
 

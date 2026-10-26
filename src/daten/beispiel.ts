@@ -128,6 +128,8 @@ export function beispielDaten(): Datenbestand {
   // Eigene Domain mit Vereinspostfächern – wird übernommen, sobald die Domain eingerichtet ist (Admin → Webseite → Domain & E-Mail)
   verein.domain = { name: 'bsg-medizin-dessau.de', info: 'info@bsg-medizin-dessau.de', vorstand: 'vorstand@bsg-medizin-dessau.de', shop: 'shop@bsg-medizin-dessau.de' };
   verein.registrierungAktiv = true;
+  // Testbetrieb, bis ein Admin die Webseite veröffentlicht (Verwaltung → Webseite)
+  verein.veroeffentlicht = false;
   verein.zweiFaktorPflicht = false;
   // Bis die Domain-Postfächer existieren, laufen Shop-Anfragen über die bisherige Vereinsadresse
   const shopAngaben = { ...verein, shopEmail: verein.email, abholort: 'beim Training oder nach Absprache', versandkosten: 4.95 };

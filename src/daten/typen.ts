@@ -56,6 +56,9 @@ export interface Verein {
   shop?: ShopEinstellungen;
   /** Eigene Domain und Vereinspostfächer (info@, vorstand@, shop@) */
   domain?: { name: string; info: string; vorstand: string; shop: string };
+  /** Testbetrieb: solange false, sehen nur angemeldete Personen die Webseite (auch in firestore.rules erzwungen) */
+  veroeffentlicht?: boolean;
+  veroeffentlichtAm?: string;
   /** Selbstregistrierung im Mitgliederbereich erlauben (Konto wartet auf Freischaltung) */
   registrierungAktiv?: boolean;
   /** Administratoren müssen sich mit zweitem Faktor (Authenticator-App) anmelden – wird in firestore.rules erzwungen */

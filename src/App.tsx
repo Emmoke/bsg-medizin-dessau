@@ -18,6 +18,8 @@ import { Einrichtung } from './portal/Einrichtung';
 import { CLOUD } from './daten/modus';
 import { aufStatus, eingerichtet } from './daten/cloud';
 import { Link } from './router';
+import { useAnmeldungLaedt, useBenutzer } from './daten/anmeldung';
+import { IM_TESTBETRIEB_OFFEN, Testbetrieb, TestbetriebBalken, imTestbetrieb } from './oeffentlich/Testbetrieb';
 
 const VEREIN: Record<string, VereinTeil> = {
   '/verein': 'ueber', '/verein/vorstand': 'vorstand', '/verein/geschichte': 'geschichte', '/verein/satzung': 'satzung',
@@ -75,11 +77,20 @@ export function App() {
   useEffect(() => { nachOben(); }, [pfad]);
   useSeitenBewegung(pfad);
   const istEingerichtet = useSyncExternalStore(aufStatus, () => eingerichtet, () => null);
+  const benutzer = useBenutzer();
+  const anmeldungLaedt = useAnmeldungLaedt();
   if (pfad === '/einrichtung') return <><Einrichtung /><Hinweise /></>;
+
+  // Testbetrieb: Gäste sehen nur die Hinweisseite (plus Anmeldung, Impressum, Datenschutz)
+  const test = imTestbetrieb(d.verein) && istEingerichtet !== false;
+  if (!portal && test && !benutzer && !IM_TESTBETRIEB_OFFEN.includes(pfad)) {
+    return anmeldungLaedt ? null : <><Testbetrieb verein={d.verein} /><Hinweise /></>;
+  }
 
   return (
     <>
       {!portal && <Fortschritt />}
+      {test && benutzer && !portal && <TestbetriebBalken />}
       {portal ? <Portal pfad={pfad} /> : <Layout><OeffentlicheSeite pfad={pfad} /></Layout>}
       {CLOUD && istEingerichtet === false && (
         <div className="fixed inset-x-0 bottom-0 z-[80] bg-slate-900 px-4 py-3 text-center text-sm text-white">

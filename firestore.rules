@@ -20,6 +20,8 @@ service cloud.firestore {
       return aktiv() && ((rolle() == 'admin' && zweiterFaktorOk())
         || (eingerichtet() && rolle() != 'admin' && recht in verein().rechte[rolle()]));
     }
+    // Testbetrieb: Inhalte für Gäste erst nach Veröffentlichung (meta/verein.veroeffentlicht), Angemeldete sehen immer alles
+    function sichtbar() { return aktiv() || (eingerichtet() && verein().get('veroeffentlicht', false) == true); }
     function trainerVon(mannschaftId) { return aktiv() && rolle() == 'trainer' && mannschaftId in ich().mannschaftIds; }
     function nurFelder(felder) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(felder); }
     function team() { return request.resource != null ? request.resource.data.mannschaftId : resource.data.mannschaftId; }
@@ -33,7 +35,7 @@ service cloud.firestore {
         // die Zwei-Faktor-Pflicht schalten nur Administratoren
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['zweiFaktorPflicht']) || (rolle() == 'admin' && zweiterFaktorOk()));
     }
-    match /meta/geburtstage { allow read: if true; allow write: if darf('mitglieder.verwalten'); }
+    match /meta/geburtstage { allow read: if sichtbar(); allow write: if darf('mitglieder.verwalten'); }
 
     // ---- Benutzer ----
     match /benutzer/{uid} {
@@ -57,17 +59,17 @@ service cloud.firestore {
     }
 
     // ---- Öffentlich lesbar ----
-    match /mannschaften/{id} { allow read: if true; allow write: if darf('mannschaften.verwalten'); }
-    match /spieler/{id} { allow read: if true; allow write: if darf('mannschaften.verwalten') || trainerVon(team()); }
+    match /mannschaften/{id} { allow read: if sichtbar(); allow write: if darf('mannschaften.verwalten'); }
+    match /spieler/{id} { allow read: if sichtbar(); allow write: if darf('mannschaften.verwalten') || trainerVon(team()); }
     match /spiele/{id} {
-      allow read: if true;
+      allow read: if sichtbar();
       allow write: if darf('spiele.verwalten') || trainerVon(team());
       // Mitglieder geben ihre Zu-/Absage ab
       allow update: if aktiv() && nurFelder(['zusagen']);
     }
-    match /tabellen/{id} { allow read: if true; allow write: if darf('spiele.verwalten') || trainerVon(team()); }
-    match /sponsoren/{id} { allow read: if true; allow write: if darf('sponsoren.verwalten'); }
-    match /gegner/{id} { allow read: if true; allow write: if darf('spiele.verwalten') || (aktiv() && rolle() == 'trainer'); }
+    match /tabellen/{id} { allow read: if sichtbar(); allow write: if darf('spiele.verwalten') || trainerVon(team()); }
+    match /sponsoren/{id} { allow read: if sichtbar(); allow write: if darf('sponsoren.verwalten'); }
+    match /gegner/{id} { allow read: if sichtbar(); allow write: if darf('spiele.verwalten') || (aktiv() && rolle() == 'trainer'); }
     match /aufrufe/{tag} {
       allow read: if true;
       // anonymer Seitenzähler: nur +1
@@ -82,20 +84,20 @@ service cloud.firestore {
 
     // ---- Teilweise öffentlich ----
     match /news/{id} {
-      allow read: if resource.data.status == 'veroeffentlicht' || aktiv();
+      allow read: if (resource.data.status == 'veroeffentlicht' && sichtbar()) || aktiv();
       allow write: if darf('news.verwalten') || trainerVon(team());
     }
-    match /termine/{id} { allow read: if resource.data.oeffentlich == true || aktiv(); allow write: if darf('termine.verwalten'); }
-    match /alben/{id} { allow read: if resource.data.oeffentlich == true || aktiv(); allow write: if darf('medien.verwalten') || trainerVon(team()); }
+    match /termine/{id} { allow read: if (resource.data.oeffentlich == true && sichtbar()) || aktiv(); allow write: if darf('termine.verwalten'); }
+    match /alben/{id} { allow read: if (resource.data.oeffentlich == true && sichtbar()) || aktiv(); allow write: if darf('medien.verwalten') || trainerVon(team()); }
     match /dokumente/{id} {
-      allow read: if resource.data.sichtbar == 'oeffentlich'
+      allow read: if (resource.data.sichtbar == 'oeffentlich' && sichtbar())
         || (aktiv() && (resource.data.sichtbar == 'mitglieder'
           || (resource.data.sichtbar == 'trainer' && rolle() in ['trainer', 'vorstand', 'admin'])
           || rolle() in ['vorstand', 'admin']));
       allow write: if darf('dokumente.verwalten');
     }
     match /gaestebuch/{id} {
-      allow read: if resource.data.status == 'freigegeben' || darf('news.verwalten');
+      allow read: if (resource.data.status == 'freigegeben' && sichtbar()) || darf('news.verwalten');
       allow create: if request.resource.data.status == 'neu' && request.resource.data.text is string && request.resource.data.text.size() <= 1500
         && request.resource.data.name.size() <= 60 && !request.resource.data.keys().hasAny(['antwort']);
       allow update, delete: if darf('news.verwalten');
@@ -136,7 +138,7 @@ service cloud.firestore {
     match /postausgang/{id} { allow read, write: if darf('email.senden') || darf('finanzen.verwalten') || darf('shop.verwalten'); }
 
     // ---- Fanshop: Artikel öffentlich, Bestellungen dürfen Gäste nur anlegen ----
-    match /artikel/{id} { allow read: if true; allow write: if darf('shop.verwalten'); }
+    match /artikel/{id} { allow read: if sichtbar(); allow write: if darf('shop.verwalten'); }
     match /bestellungen/{id} {
       allow create: if request.resource.data.status == 'neu'
         && request.resource.data.zustimmung.agb == true && request.resource.data.zustimmung.datenschutz == true
