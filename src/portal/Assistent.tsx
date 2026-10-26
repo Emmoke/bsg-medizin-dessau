@@ -131,7 +131,8 @@ export function Assistent({ d, b }: { d: Datenbestand; b: Benutzer }) {
         try { antwort = await fragen(neu, system); }
         catch (e) {
           const m = String((e as Error)?.message ?? e);
-          setFehler(/api-not-enabled|AI Logic|PERMISSION_DENIED|403|not been used|disabled/i.test(m) ? 'Die KI ist in Firebase noch nicht eingeschaltet (Konsole → AI Logic → „Gemini Developer API“ aktivieren).' : `KI nicht erreichbar: ${m.slice(0, 160)}`);
+          setFehler(/app.?check/i.test(m) ? 'Die KI verlangt App Check – die Web-App ist dort noch nicht registriert (README → Vereins-Assistent).'
+            : /api-not-enabled|AI Logic|PERMISSION_DENIED|403|not been used|disabled/i.test(m) ? 'Die KI ist in Firebase noch nicht eingeschaltet (Konsole → AI Logic → „Gemini Developer API“ aktivieren).' : `KI nicht erreichbar: ${m.slice(0, 160)}`);
           antwort = antwortOhneKi(d, b, heute, darf);
         }
       }

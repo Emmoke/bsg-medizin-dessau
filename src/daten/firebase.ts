@@ -3,7 +3,7 @@
 import { initializeApp, deleteApp } from 'firebase/app';
 import { browserLocalPersistence, createUserWithEmailAndPassword, getAuth, initializeAuth, signOut } from 'firebase/auth';
 import { clearIndexedDbPersistence, initializeFirestore, memoryLocalCache } from 'firebase/firestore';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getStorage } from 'firebase/storage';
 
 export const FIREBASE_KONFIG = {
@@ -17,11 +17,13 @@ export const FIREBASE_KONFIG = {
 
 export const app = initializeApp(FIREBASE_KONFIG);
 
-// App Check (Schutz vor Bots/Missbrauch der Datenbank): aktiv, sobald beim Bauen ein reCAPTCHA-v3-Websiteschlüssel
-// gesetzt ist (GitHub → Settings → Variables → APPCHECK_SCHLUESSEL). Danach in der Firebase-Konsole „Erzwingen“ einschalten.
+// App Check (Schutz vor Bots/Missbrauch, Pflicht für den KI-Assistenten über Firebase AI Logic): aktiv, sobald beim
+// Bauen ein reCAPTCHA-Websiteschlüssel gesetzt ist (VITE_APPCHECK, in GitHub als Variable APPCHECK_SCHLUESSEL).
+// Standard: reCAPTCHA Enterprise (Firebase legt den Schlüssel selbst an); VITE_APPCHECK_V3=1 für einen reCAPTCHA-v3-Schlüssel.
 export const APPCHECK_SCHLUESSEL: string = import.meta.env.VITE_APPCHECK ?? '';
 if (APPCHECK_SCHLUESSEL && typeof window !== 'undefined') {
-  initializeAppCheck(app, { provider: new ReCaptchaV3Provider(APPCHECK_SCHLUESSEL), isTokenAutoRefreshEnabled: true });
+  const provider = import.meta.env.VITE_APPCHECK_V3 === '1' ? new ReCaptchaV3Provider(APPCHECK_SCHLUESSEL) : new ReCaptchaEnterpriseProvider(APPCHECK_SCHLUESSEL);
+  initializeAppCheck(app, { provider, isTokenAutoRefreshEnabled: true });
 }
 
 /** Firebase Storage für große Bilder/Dateien – nur mit Blaze-Tarif verfügbar, daher beim Bauen einschaltbar (VITE_STORAGE=1) */
